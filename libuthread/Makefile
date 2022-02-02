@@ -17,7 +17,7 @@ deps := $(patsubst %.o,%.d,$(objs))
 
 libuthread.a: $(objs)
 	@echo "CC $@"
-	$(Q)$(CC) $(CFLAGS) $(objs) $@
+	$(Q)ar -rcs $@ $<
 
 %.o: %.c
 	@echo "CC $@"

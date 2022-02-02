@@ -77,14 +77,14 @@ int queue_dequeue(queue_t queue, void **data)
 
 		if(queue->head == queue->tail) //one node left in queue
 		{
-			data = &(queue->head->data);	//IDK if correct &
+			data = (queue->head->data);	//IDK if correct &
 			free(queue->head); //IDK if need &
 			queue->head = NULL; //IDK if necessary
 			queue->tail = NULL; //IDK if necessary
 		}
 		else //more than one node in queue
 		{
-			data = &(queue->head->data); //IDK if correct &
+			data = (queue->head->data); //IDK if correct &
 			struct node* temp_head_ptr = queue->head;
 			queue->head = queue->head->nxtnode;
 			free(temp_head_ptr);
@@ -108,15 +108,40 @@ int queue_delete(queue_t queue, void *data)
 			if(temp_node_ptr->data == data)
 			{
 				free(queue->head);
-				queue->head = NULL; //IDK if necessary
-				queue->tail = NULL; //IDK if necessary
+				queue->head = NULL;	//IDK if necessary
+				queue->tail = NULL;	//IDK if necessary
 				return 0;
 			}
 		}
 		else	//need to iterate because queue has more than 1 nodes
 		{
-			for(int i=0; i < queue->length; i++)
+			int found = 0;
+
+			for(int i=1; (i < queue->length) && !found; i++)	//skip first node
 			{
+				temp_prev_node_ptr = temp_node_ptr;
+				temp_node_ptr = temp_node_ptr->nxtnode;
+				if(temp_node_ptr->data == data)
+				{
+					found = 1;
+				}
+			}
+
+			if(found)
+			{
+				if(temp_node_ptr->nxtnode == NULL)	//is last node
+				{
+					free(temp_node_ptr);
+					queue->tail = temp_prev_node_ptr;
+					queue->tail->nxtnode = NULL; //IDK if necessary
+				}
+				else	//is not last node
+				{
+					temp_prev_node_ptr->nxtnode = temp_node_ptr->nxtnode;
+					free(temp_node_ptr);
+				}
+
+				return 0;
 			}
 		}
 	}
@@ -127,6 +152,10 @@ int queue_delete(queue_t queue, void *data)
 int queue_iterate(queue_t queue, queue_func_t func, void *arg, void **data)
 {
 	/* TODO */
+	if(queue != NULL && func != NULL && arg != NULL && data != NULL)
+	{
+
+	}
 	return -1;
 }
 
