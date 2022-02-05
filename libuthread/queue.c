@@ -87,6 +87,7 @@ int queue_dequeue(queue_t queue, void **data)
 {
 	if(queue != NULL && data != NULL && queue->length != 0)
 	{
+		printf("hi %p\n", queue->head->data);
 		*data = queue->head->data;
 		struct node* temp_head_ptr = queue->head;
 		queue->head = queue->head->nxtnode;
@@ -173,16 +174,16 @@ int main(void)
 	int data = 3, data2 = 4, data3 = 5, *ptr, *ptr2, *ptr3;
 	queue_t q;
 
-	printf("*** TEST queue_ ***\n");
+	printf("*** TEST queue_complex ***\n");
 
 	q = queue_create();
-	queue_enqueue(q, &data);
-	queue_enqueue(q, &data2);
-	queue_enqueue(q, &data3);
 	queue_dequeue(q, (void**)&ptr);
+	queue_enqueue(q, &data2);
 	queue_dequeue(q, (void**)&ptr2);
-	queue_delete(q, &data3);
+	queue_enqueue(q, &data3);
+	queue_dequeue(q, (void**)&ptr3);
 	printf("Check 1 %d\n", ptr == &data);
 	printf("Check 2 %d\n", ptr2 == &data2);
+	printf("Check 3 %d\n", ptr3 == &data3);
 	queue_destroy(q);	// for valgrind heap memory leaks checking
 }

@@ -57,6 +57,26 @@ void test_queue_complex(void)
 	TEST_ASSERT(ptr3 == &data3);
 }
 
+//enqueue/dequeue complex
+void test_queue_complex2(void)
+{
+	int data = 3, data2 = 4, data3 = 5, *ptr, *ptr2, *ptr3;
+	queue_t q;
+
+	printf("*** TEST queue_complex2 ***\n");
+
+	q = queue_create();
+	queue_enqueue(q, &data);
+	queue_dequeue(q, (void**)&ptr);
+	queue_enqueue(q, &data2);
+	queue_dequeue(q, (void**)&ptr2);
+	queue_enqueue(q, &data3);
+	queue_dequeue(q, (void**)&ptr3);
+	TEST_ASSERT(ptr == &data);
+	TEST_ASSERT(ptr2 == &data2);
+	TEST_ASSERT(ptr3 == &data3);
+}
+
 //delete beginning
 void test_queue_delete_beg(void)
 {
@@ -176,6 +196,7 @@ int main(void)
 	test_create();
 	test_queue_simple();
 	test_queue_complex();
+	test_queue_complex2();
 	test_queue_delete_beg();
 	test_queue_delete_mid();
 	test_queue_delete_mid2();
