@@ -132,14 +132,13 @@ int queue_delete(queue_t queue, void *data)
 				{
 					queue->tail = temp_prev_node_ptr;
 					queue->tail->nxtnode = NULL; //IDK if necessary
-					free(temp_node_ptr);
 				}
 				else	//is not last node
 				{
 					temp_prev_node_ptr->nxtnode = temp_node_ptr->nxtnode;
-					free(temp_node_ptr);
 				}
 
+				free(temp_node_ptr);
 				queue->length--;
 				return 0;
 			}
