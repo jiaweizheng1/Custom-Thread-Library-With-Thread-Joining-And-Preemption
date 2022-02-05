@@ -3,6 +3,19 @@
 #include <string.h>
 
 #include "queue.h"
+#include <stdio.h>	//delete later
+
+//delete later
+typedef struct queue* queue_t;
+queue_t queue_create(void);
+int queue_destroy(queue_t queue);
+int queue_enqueue(queue_t queue, void *data);
+int queue_dequeue(queue_t queue, void **data);
+int queue_delete(queue_t queue, void *data);
+typedef int (*queue_func_t)(queue_t queue, void *data, void *arg);
+int queue_iterate(queue_t queue, queue_func_t func, void *arg, void **data);
+int queue_length(queue_t queue);
+//delete later
 
 typedef struct node node_t;
 
@@ -24,7 +37,8 @@ queue_t queue_create(void)
 
 	if(queue != NULL)
 	{
-		queue->head = NULL;	//IDK if necessary
+		queue->head = NULL;
+		queue->tail = NULL;
 		queue->length = 0;
 	}
 
@@ -50,7 +64,6 @@ int queue_enqueue(queue_t queue, void *data)
 	{
 		node->data = data;
 		node->nxtnode = NULL; //IDK if necessary
-		queue->length++;
 
 		if(queue->head == NULL)	//first node
 		{
@@ -63,6 +76,7 @@ int queue_enqueue(queue_t queue, void *data)
 			queue->tail = node;
 		}
 
+		queue->length++;
 		return 0;
 	}
 
@@ -73,23 +87,11 @@ int queue_dequeue(queue_t queue, void **data)
 {
 	if(queue != NULL && data != NULL && queue->length != 0)
 	{
+		*data = queue->head->data;
+		struct node* temp_head_ptr = queue->head;
+		queue->head = queue->head->nxtnode;
+		free(temp_head_ptr);
 		queue->length--;
-
-		if(queue->head == queue->tail) //one node left in queue
-		{
-			data = (queue->head->data);	//IDK if correct &
-			free(queue->head); //IDK if need &
-			queue->head = NULL; //IDK if necessary
-			queue->tail = NULL; //IDK if necessary
-		}
-		else //more than one node in queue
-		{
-			data = (queue->head->data); //IDK if correct &
-			struct node* temp_head_ptr = queue->head;
-			queue->head = queue->head->nxtnode;
-			free(temp_head_ptr);
-		}
-
 		return 0;
 	}
 
@@ -101,20 +103,17 @@ int queue_delete(queue_t queue, void *data)
 	if(queue != NULL && data != NULL)
 	{
 		struct node* temp_node_ptr = queue->head;	//iterate starting from head
-		struct node* temp_prev_node_ptr = NULL;
 
-		if(queue->length == 1)	//dont need to iterate anymore because queue is of size 1
+		if(temp_node_ptr->data == data)	//head has the same data
 		{
-			if(temp_node_ptr->data == data)
-			{
-				free(queue->head);
-				queue->head = NULL;	//IDK if necessary
-				queue->tail = NULL;	//IDK if necessary
-				return 0;
-			}
+			queue->head = queue->head->nxtnode;
+			free(temp_node_ptr);
+			queue->length--;
+			return 0;
 		}
-		else	//need to iterate because queue has more than 1 nodes
+		else	//need to iterate because queue has atleast 2 nodes and head does not have the same data
 		{
+			struct node* temp_prev_node_ptr;
 			int found = 0;
 
 			for(int i=1; (i < queue->length) && !found; i++)	//skip first node
@@ -129,11 +128,11 @@ int queue_delete(queue_t queue, void *data)
 
 			if(found)
 			{
-				if(temp_node_ptr->nxtnode == NULL)	//is last node
+				if(temp_node_ptr->nxtnode == NULL)	//is tail node
 				{
-					free(temp_node_ptr);
 					queue->tail = temp_prev_node_ptr;
 					queue->tail->nxtnode = NULL; //IDK if necessary
+					free(temp_node_ptr);
 				}
 				else	//is not last node
 				{
@@ -141,6 +140,7 @@ int queue_delete(queue_t queue, void *data)
 					free(temp_node_ptr);
 				}
 
+				queue->length--;
 				return 0;
 			}
 		}
@@ -167,4 +167,23 @@ int queue_length(queue_t queue)
 	}
 
 	return -1;
+}
+
+int main(void)
+{
+	int data = 3, data2 = 4, data3 = 5, *ptr, *ptr2, *ptr3;
+	queue_t q;
+
+	printf("*** TEST queue_ ***\n");
+
+	q = queue_create();
+	queue_enqueue(q, &data);
+	queue_enqueue(q, &data2);
+	queue_enqueue(q, &data3);
+	queue_dequeue(q, (void**)&ptr);
+	queue_dequeue(q, (void**)&ptr2);
+	queue_delete(q, &data3);
+	printf("Check 1 %d\n", ptr == &data);
+	printf("Check 2 %d\n", ptr2 == &data2);
+	queue_destroy(q);	// for valgrind heap memory leaks checking
 }
