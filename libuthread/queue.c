@@ -155,11 +155,18 @@ int queue_iterate(queue_t queue, queue_func_t func, void *arg, void **data)
 {
 	if(queue != NULL && func != NULL)
 	{
+		struct node* temp_node_ptr = queue->head->nxtnode;	//keep a ptr for next node in case current node gets deleted
+		struct node* temp_prev_node_ptr=queue->head;
 
-	}
-	if(arg != NULL && data != NULL) //delete
-	{
-
+		while(!(func(queue, temp_prev_node_ptr->data, arg)) && temp_prev_node_ptr != NULL)	//IDK data might need * or &
+		{
+			*data = temp_prev_node_ptr->data;
+			temp_prev_node_ptr = temp_node_ptr;
+			if(temp_node_ptr != NULL)
+			{
+				temp_node_ptr = temp_node_ptr->nxtnode;
+			}
+		}
 	}
 	
 	return -1;
