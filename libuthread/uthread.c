@@ -11,10 +11,24 @@
 #include "uthread.h"
 
 /* TODO */
+#define UTHREAD_STACK_SIZE 32768
+#include "queue.h"
+ucontext_t ctx[USHRT_MAX];
+uthread_t TID = 0;
+queue_t scheduler;
+
 
 int uthread_start(int preempt)
 {
-	/* TODO */
+	if(preempt == 0)
+	{
+
+	}
+
+	scheduler = queue_create();
+	queue_enqueue(scheduler, &TID);
+	TID++;
+
 	return -1;
 }
 
@@ -26,7 +40,10 @@ int uthread_stop(void)
 
 int uthread_create(uthread_func_t func)
 {
-	/* TODO */
+	char threadstack[UTHREAD_STACK_SIZE]; //IDK maybe malloc?
+	uthread_ctx_init(&ctx[TID], &threadstack, func); //IDK about & sign for stack
+	
+	return TID;
 	return -1;
 }
 
@@ -43,12 +60,18 @@ uthread_t uthread_self(void)
 
 void uthread_exit(int retval)
 {
-	/* TODO */
+	if(retval == 0)
+	{
+
+	}
 }
 
 int uthread_join(uthread_t tid, int *retval)
 {
-	/* TODO */
+	if(tid ==0 && retval == 0)
+	{
+
+	}
 	return -1;
 }
 

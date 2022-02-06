@@ -1,11 +1,13 @@
-#target library; Add comments for the rest later
+#target library
 lib := libuthread.a
-objs := queue.o
+#dependencies
+objs := context.o queue.o uthread.o preempt.o
 
+#compile flags
 CC := gcc
 CFLAGS := -Wall -Wextra -Werror
 
-#more compile info flag
+#more info compile flag
 ifneq ($(V), 1)
 Q = @
 endif
@@ -19,12 +21,9 @@ endif
 
 all: $(lib)
 
-deps := $(patsubst %.o,%.d,$(objs))
--include $(deps)
-
 libuthread.a: $(objs)
 	@echo "CC $@"
-	$(Q)ar -rcs $@ $<
+	$(Q)ar rcs $@ $^
 
 %.o: %.c
 	@echo "CC $@"
