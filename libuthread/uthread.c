@@ -13,7 +13,7 @@
 /* TODO */
 #define UTHREAD_STACK_SIZE 32768
 #include "queue.h"
-ucontext_t ctx[USHRT_MAX];
+static ucontext_t ctx[USHRT_MAX];
 uthread_t TID = 0;
 queue_t scheduler;
 
@@ -41,8 +41,10 @@ int uthread_stop(void)
 int uthread_create(uthread_func_t func)
 {
 	char threadstack[UTHREAD_STACK_SIZE]; //IDK maybe malloc?
-	uthread_ctx_init(&ctx[TID], &threadstack, func); //IDK about & sign for stack
+	uthread_ctx_init(&ctx[TID], threadstack, func); //IDK about & sign for stack
 	
+	uthread_ctx_switch(&ctx[TID-1], &ctx[TID]);
+
 	return TID;
 	return -1;
 }
