@@ -4,20 +4,8 @@
 
 #include "queue.h"
 
-/*
-#include <stdio.h>
-#include <assert.h>
-#include <stdio.h>
-typedef struct queue* queue_t;
-queue_t queue_create(void);
-int queue_destroy(queue_t queue);
-int queue_enqueue(queue_t queue, void *data);
-int queue_dequeue(queue_t queue, void **data);
-int queue_delete(queue_t queue, void *data);
-typedef int (*queue_func_t)(queue_t queue, void *data, void *arg);
-int queue_iterate(queue_t queue, queue_func_t func, void *arg, void **data);
-int queue_length(queue_t queue);
-*/
+//ref: https://www.tutorialspoint.com/cprogramming/c_typedef.htm
+//typedef struct queue* queue_t; //queue_t is a pointer to struct queue
 
 typedef struct node node_t;
 
@@ -35,6 +23,7 @@ struct queue
 
 queue_t queue_create(void)
 {
+	//only need to allocate space for the struct
 	queue_t queue = (queue_t)malloc(sizeof(struct queue));
 
 	if(queue != NULL)
@@ -155,42 +144,24 @@ int queue_delete(queue_t queue, void *data)
 
 int queue_iterate(queue_t queue, queue_func_t func, void *arg, void **data)
 {
-	if(queue != NULL && func != NULL)
+	if(queue == NULL || func == NULL) return -1;
+
+	node_t* curr = queue->head;
+
+	while (curr != NULL)
 	{
-		if(queue->head == NULL) //return 0 prematurely for queue of size 0
+		void* curr_data = curr->data;
+		node_t* curr_next = curr->nxtnode;
+		int ret = (*func)(queue, curr_data, arg); //curr may be deleted here
+		if (ret == 1)
 		{
-			return 0;
+			if (data != NULL) *data = curr_data;
+			break;
 		}
-
-		struct node* temp_node_ptr = queue->head->nxtnode;	//keep a ptr for next node in case current node gets deleted
-		struct node* temp_prev_node_ptr = queue->head;
-
-		int retval;
-		int done = 0;
-		retval = func(queue, temp_prev_node_ptr->data, arg);
-		while(!retval && !done)	//IDK data might need * or &
-		{
-			if(temp_node_ptr == NULL)
-			{
-				done = 1;
-			}
-			else
-			{
-				temp_prev_node_ptr = temp_node_ptr;
-				temp_node_ptr = temp_node_ptr->nxtnode;
-				retval = func(queue, temp_prev_node_ptr->data, arg);
-			}
-		}
-
-		if(retval && data != NULL)
-		{
-			*data = temp_prev_node_ptr->data;
-		}
-		
-		return 0;
+		curr = curr_next;
 	}
-	
-	return -1;
+
+	return 0;
 }
 
 int queue_length(queue_t queue)
