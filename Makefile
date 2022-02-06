@@ -7,4 +7,4 @@ contexts_fixed_schedule: contexts_fixed_schedule.c
 
 .PHONY: clean
 clean:
-	rm -f *.txt untracked contexts_fixed_schedule all
+	rm -f contexts_fixed_schedule
