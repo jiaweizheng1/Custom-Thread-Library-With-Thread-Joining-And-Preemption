@@ -4,8 +4,10 @@
 
 #include "queue.h"
 
+/*
 #include <stdio.h>
-/*delete later
+#include <assert.h>
+#include <stdio.h>
 typedef struct queue* queue_t;
 queue_t queue_create(void);
 int queue_destroy(queue_t queue);
@@ -155,7 +157,7 @@ int queue_iterate(queue_t queue, queue_func_t func, void *arg, void **data)
 {
 	if(queue != NULL && func != NULL)
 	{
-		if(queue->head != NULL) //return 0 prematurely for queue of size 0
+		if(queue->head == NULL) //return 0 prematurely for queue of size 0
 		{
 			return 0;
 		}
@@ -163,7 +165,7 @@ int queue_iterate(queue_t queue, queue_func_t func, void *arg, void **data)
 		struct node* temp_node_ptr = queue->head->nxtnode;	//keep a ptr for next node in case current node gets deleted
 		struct node* temp_prev_node_ptr = queue->head;
 
-		while(temp_prev_node_ptr != NULL && !(func(queue, temp_prev_node_ptr->data, arg)))	//IDK data might need * or &
+		while(temp_prev_node_ptr != NULL && !(func(queue, (void*)temp_prev_node_ptr->data, arg)))	//IDK data might need * or &
 		{
 			temp_prev_node_ptr = temp_node_ptr;
 			if(temp_node_ptr != NULL)
@@ -192,25 +194,3 @@ int queue_length(queue_t queue)
 
 	return -1;
 }
-
-/*delete later
-int main(void)
-{
-	int data = 3, data2 = 4, data3 = 5, *ptr, *ptr2, *ptr3;
-	queue_t q;
-
-	printf("*** TEST queue_complex ***\n");
-
-	q = queue_create();
-	queue_enqueue(q, &data);
-	queue_dequeue(q, (void**)&ptr);
-	queue_enqueue(q, &data2);
-	queue_dequeue(q, (void**)&ptr2);
-	queue_enqueue(q, &data3);
-	queue_dequeue(q, (void**)&ptr3);
-	printf("Check 1 %d\n", ptr == &data);
-	printf("Check 2 %d\n", ptr2 == &data2);
-	printf("Check 3 %d\n", ptr3 == &data3);
-	queue_destroy(q);	// for valgrind heap memory leaks checking
-}
-*/

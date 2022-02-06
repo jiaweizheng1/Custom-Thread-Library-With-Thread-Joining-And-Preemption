@@ -299,6 +299,8 @@ void test_iterator(void)
     size_t i;
     int *ptr;
 
+	printf("*** TEST queue_iterator ***\n");
+
     /* Initialize the queue and enqueue items */
     q = queue_create();
     for (i = 0; i < sizeof(data) / sizeof(data[0]); i++)
@@ -306,15 +308,18 @@ void test_iterator(void)
 
     /* Add value '1' to every item of the queue, delete item '42' */
     queue_iterate(q, inc_item, (void*)1, NULL);
-    assert(data[0] == 2);
-    assert(queue_length(q) == 9);
+    TEST_ASSERT(data[0] == 2);
+    TEST_ASSERT(queue_length(q) == 9);
 
     /* Find and get the item which is equal to value '5' */
     ptr = NULL;     // result pointer *must* be reset first
     queue_iterate(q, find_item, (void*)5, (void**)&ptr);
-    assert(ptr != NULL);
-    assert(*ptr == 5);
-    assert(ptr == &data[3]);
+    TEST_ASSERT(ptr != NULL);
+    TEST_ASSERT(*ptr == 5);
+    TEST_ASSERT(ptr == &data[3]);
+	for (i = 0; i < 9; i++)
+        queue_dequeue(q, (void**)&ptr);
+	queue_destroy(q);	//for valgrind checking memory leaks
 }
 
 int main(void)
