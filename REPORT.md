@@ -1,6 +1,6 @@
 # Project 2 Report
 <!--
-summary
+summary TODO
 -->
 
 Contributors: Haixu Qin, Jiawei Zheng
