@@ -5,7 +5,7 @@
 #include "queue.h"
 #include <stdio.h>	//delete later
 
-//delete later
+/*delete later
 typedef struct queue* queue_t;
 queue_t queue_create(void);
 int queue_destroy(queue_t queue);
@@ -15,7 +15,7 @@ int queue_delete(queue_t queue, void *data);
 typedef int (*queue_func_t)(queue_t queue, void *data, void *arg);
 int queue_iterate(queue_t queue, queue_func_t func, void *arg, void **data);
 int queue_length(queue_t queue);
-//delete later
+*/
 
 typedef struct node node_t;
 
@@ -58,26 +58,29 @@ int queue_destroy(queue_t queue)
 
 int queue_enqueue(queue_t queue, void *data)
 {
-	node_t *node = (node_t*)malloc(sizeof(node_t));
-
-	if(queue != NULL && data != NULL && node != NULL)
+	if(queue != NULL && data != NULL)
 	{
-		node->data = data;
-		node->nxtnode = NULL; //IDK if necessary
+		node_t *node = (node_t*)malloc(sizeof(node_t));
 
-		if(queue->head == NULL)	//first node
+		if(node != NULL)
 		{
-			queue->head = node;
-			queue->tail = node;
-		}
-		else	//nodes after the first node
-		{
-			queue->tail->nxtnode = node;
-			queue->tail = node;
-		}
+			node->data = data;
+			node->nxtnode = NULL; //IDK if necessary
 
-		queue->length++;
-		return 0;
+			if(queue->head == NULL)	//first node
+			{
+				queue->head = node;
+				queue->tail = node;
+			}
+			else	//nodes after the first node
+			{
+				queue->tail->nxtnode = node;
+				queue->tail = node;
+			}
+
+			queue->length++;
+			return 0;
+		}
 	}
 
 	return -1;
@@ -87,7 +90,6 @@ int queue_dequeue(queue_t queue, void **data)
 {
 	if(queue != NULL && data != NULL && queue->length != 0)
 	{
-		printf("hi %p\n", queue->head->data);
 		*data = queue->head->data;
 		struct node* temp_head_ptr = queue->head;
 		queue->head = queue->head->nxtnode;
@@ -169,6 +171,7 @@ int queue_length(queue_t queue)
 	return -1;
 }
 
+/*delete later
 int main(void)
 {
 	int data = 3, data2 = 4, data3 = 5, *ptr, *ptr2, *ptr3;
@@ -177,6 +180,7 @@ int main(void)
 	printf("*** TEST queue_complex ***\n");
 
 	q = queue_create();
+	queue_enqueue(q, &data);
 	queue_dequeue(q, (void**)&ptr);
 	queue_enqueue(q, &data2);
 	queue_dequeue(q, (void**)&ptr2);
@@ -187,3 +191,4 @@ int main(void)
 	printf("Check 3 %d\n", ptr3 == &data3);
 	queue_destroy(q);	// for valgrind heap memory leaks checking
 }
+*/

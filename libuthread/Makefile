@@ -1,10 +1,35 @@
-.PHONY: all
-all: queue
+#target library; Add comments for the rest later
+lib := libuthread.a
+objs := queue.o
 
-queue: queue.c
-	gcc queue.c -o queue
-	#-Wall -Wextra -Werror 
+CC := gcc
+CFLAGS := -Wall -Wextra -Werror
 
-.PHONY: clean
+#more compile info flag
+ifneq ($(V), 1)
+Q = @
+endif
+
+#debug flag
+ifneq ($(D), 1)
+CFLAGS += -O2
+else
+CFLAGS += -g
+endif
+
+all: $(lib)
+
+deps := $(patsubst %.o,%.d,$(objs))
+-include $(deps)
+
+libuthread.a: $(objs)
+	@echo "CC $@"
+	$(Q)ar -rcs $@ $<
+
+%.o: %.c
+	@echo "CC $@"
+	$(Q)$(CC) $(CFLAGS) -c -o $@ $<
+
 clean:
-	rm -f queue
+	@echo "clean"
+	$(Q)rm -f $(lib) $(objs) $(deps)
