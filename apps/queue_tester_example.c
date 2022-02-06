@@ -322,6 +322,66 @@ void test_iterator(void)
 	queue_destroy(q);	//for valgrind checking memory leaks
 }
 
+void test_iterator2(void)
+{
+    queue_t q;
+    int data[] = {1, 2, 3, 4, 5, 9, 6, 7, 8, 42};
+    size_t i;
+    int *ptr;
+
+	printf("*** TEST queue_iterator2 ***\n");
+
+    /* Initialize the queue and enqueue items */
+    q = queue_create();
+    for (i = 0; i < sizeof(data) / sizeof(data[0]); i++)
+        queue_enqueue(q, &data[i]);
+
+    /* Add value '1' to every item of the queue, delete item '42' */
+    queue_iterate(q, inc_item, (void*)1, NULL);
+    TEST_ASSERT(data[0] == 2);
+    TEST_ASSERT(queue_length(q) == 9);
+
+    /* Find and get the item which is equal to value '5' */
+    ptr = NULL;     // result pointer *must* be reset first
+    queue_iterate(q, find_item, (void*)5, (void**)&ptr);
+    TEST_ASSERT(ptr != NULL);
+    TEST_ASSERT(*ptr == 5);
+    TEST_ASSERT(ptr == &data[3]);
+	for (i = 0; i < 9; i++)
+        queue_dequeue(q, (void**)&ptr);
+	queue_destroy(q);	//for valgrind checking memory leaks
+}
+
+void test_iterator3(void)
+{
+    queue_t q;
+    int data[] = {1, 2, 3, 4, 5, 9, 6, 7, 42, 8};
+    size_t i;
+    int *ptr;
+
+	printf("*** TEST queue_iterator3 ***\n");
+
+    /* Initialize the queue and enqueue items */
+    q = queue_create();
+    for (i = 0; i < sizeof(data) / sizeof(data[0]); i++)
+        queue_enqueue(q, &data[i]);
+
+    /* Add value '1' to every item of the queue, delete item '42' */
+    queue_iterate(q, inc_item, (void*)1, NULL);
+    TEST_ASSERT(data[0] == 2);
+    TEST_ASSERT(queue_length(q) == 9);
+
+    /* Find and get the item which is equal to value '5' */
+    ptr = NULL;     // result pointer *must* be reset first
+    queue_iterate(q, find_item, (void*)9, (void**)&ptr);
+    TEST_ASSERT(ptr != NULL);
+    TEST_ASSERT(*ptr == 9);
+    TEST_ASSERT(ptr == &data[9]);
+	for (i = 0; i < 9; i++)
+        queue_dequeue(q, (void**)&ptr);
+	queue_destroy(q);	//for valgrind checking memory leaks
+}
+
 int main(void)
 {
 	test_create();
@@ -338,6 +398,8 @@ int main(void)
 	test_queue_delete_end2();
 	test_queue_delete_end3();
 	test_iterator();
+	test_iterator2();
+	test_iterator3();
 
 	return 0;
 }
