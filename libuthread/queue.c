@@ -38,7 +38,7 @@ queue_t queue_create(void)
 	if(queue != NULL)
 	{
 		queue->head = NULL;
-		queue->tail = NULL;
+		queue->tail = NULL;	//IDK very likely can delete because overwritten later anyways
 		queue->length = 0;
 	}
 
@@ -65,7 +65,7 @@ int queue_enqueue(queue_t queue, void *data)
 		if(node != NULL)
 		{
 			node->data = data;
-			node->nxtnode = NULL; //IDK if necessary
+			node->nxtnode = NULL; 
 
 			if(queue->head == NULL)	//first node
 			{
@@ -134,7 +134,7 @@ int queue_delete(queue_t queue, void *data)
 				if(temp_node_ptr->nxtnode == NULL)	//is tail node
 				{
 					queue->tail = temp_prev_node_ptr;
-					queue->tail->nxtnode = NULL; //IDK if necessary
+					queue->tail->nxtnode = NULL;
 				}
 				else	//is not last node
 				{
@@ -160,13 +160,15 @@ int queue_iterate(queue_t queue, queue_func_t func, void *arg, void **data)
 
 		while(!(func(queue, temp_prev_node_ptr->data, arg)) && temp_prev_node_ptr != NULL)	//IDK data might need * or &
 		{
-			*data = temp_prev_node_ptr->data;
 			temp_prev_node_ptr = temp_node_ptr;
 			if(temp_node_ptr != NULL)
 			{
 				temp_node_ptr = temp_node_ptr->nxtnode;
 			}
 		}
+
+		*data = temp_prev_node_ptr->data;
+		return 0;
 	}
 	
 	return -1;
