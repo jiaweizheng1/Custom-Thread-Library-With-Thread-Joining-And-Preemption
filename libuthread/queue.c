@@ -3,9 +3,9 @@
 #include <string.h>
 
 #include "queue.h"
-#include <stdio.h>	//delete later
 
 /*delete later
+#include <stdio.h>
 typedef struct queue* queue_t;
 queue_t queue_create(void);
 int queue_destroy(queue_t queue);
@@ -153,11 +153,11 @@ int queue_delete(queue_t queue, void *data)
 
 int queue_iterate(queue_t queue, queue_func_t func, void *arg, void **data)
 {
-	/* TODO */
-	if(queue != NULL && func != NULL && arg != NULL && data != NULL)
+	if(queue != NULL && func != NULL)
 	{
 
 	}
+	
 	return -1;
 }
 
