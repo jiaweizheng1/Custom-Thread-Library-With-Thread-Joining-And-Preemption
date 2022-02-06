@@ -153,12 +153,13 @@ int queue_delete(queue_t queue, void *data)
 
 int queue_iterate(queue_t queue, queue_func_t func, void *arg, void **data)
 {
-	if(queue->head != NULL) //return 0 prematurely for queue of size 0
+	if(queue != NULL && func != NULL)
 	{
-		return 0;
-	}
-	else if(queue != NULL && func != NULL)
-	{
+		if(queue->head != NULL) //return 0 prematurely for queue of size 0
+		{
+			return 0;
+		}
+		
 		struct node* temp_node_ptr = queue->head->nxtnode;	//keep a ptr for next node in case current node gets deleted
 		struct node* temp_prev_node_ptr=queue->head;
 
