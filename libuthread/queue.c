@@ -4,8 +4,8 @@
 
 #include "queue.h"
 
-/*delete later
 #include <stdio.h>
+/*delete later
 typedef struct queue* queue_t;
 queue_t queue_create(void);
 int queue_destroy(queue_t queue);
@@ -159,9 +159,9 @@ int queue_iterate(queue_t queue, queue_func_t func, void *arg, void **data)
 		{
 			return 0;
 		}
-		
+
 		struct node* temp_node_ptr = queue->head->nxtnode;	//keep a ptr for next node in case current node gets deleted
-		struct node* temp_prev_node_ptr=queue->head;
+		struct node* temp_prev_node_ptr = queue->head;
 
 		while(temp_prev_node_ptr != NULL && !(func(queue, temp_prev_node_ptr->data, arg)))	//IDK data might need * or &
 		{
@@ -176,6 +176,7 @@ int queue_iterate(queue_t queue, queue_func_t func, void *arg, void **data)
 		{
 			*data = temp_prev_node_ptr->data;
 		}
+		
 		return 0;
 	}
 	
