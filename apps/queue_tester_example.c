@@ -331,18 +331,15 @@ void test_iterator2(void)
 
 	printf("*** TEST queue_iterator2 ***\n");
 
-    /* Initialize the queue and enqueue items */
     q = queue_create();
     for (i = 0; i < sizeof(data) / sizeof(data[0]); i++)
         queue_enqueue(q, &data[i]);
 
-    /* Add value '1' to every item of the queue, delete item '42' */
     queue_iterate(q, inc_item, (void*)1, NULL);
     TEST_ASSERT(data[0] == 2);
     TEST_ASSERT(queue_length(q) == 9);
 
-    /* Find and get the item which is equal to value '5' */
-    ptr = NULL;     // result pointer *must* be reset first
+    ptr = NULL;    
     queue_iterate(q, find_item, (void*)5, (void**)&ptr);
     TEST_ASSERT(ptr != NULL);
     TEST_ASSERT(*ptr == 5);
@@ -361,18 +358,15 @@ void test_iterator3(void)
 
 	printf("*** TEST queue_iterator3 ***\n");
 
-    /* Initialize the queue and enqueue items */
     q = queue_create();
     for (i = 0; i < sizeof(data) / sizeof(data[0]); i++)
         queue_enqueue(q, &data[i]);
 
-    /* Add value '1' to every item of the queue, delete item '42' */
     queue_iterate(q, inc_item, (void*)1, NULL);
     TEST_ASSERT(data[0] == 2);
     TEST_ASSERT(queue_length(q) == 9);
 
-    /* Find and get the item which is equal to value '5' */
-    ptr = NULL;     // result pointer *must* be reset first
+    ptr = NULL;     
     queue_iterate(q, find_item, (void*)9, (void**)&ptr);
     TEST_ASSERT(ptr != NULL);
     TEST_ASSERT(*ptr == 9);
@@ -388,23 +382,19 @@ void test_iterator4(void)
     int data[] = {42, 2, 3, 4, 5, 9, 6, 7, 42, 42};
     size_t i;
     int *ptr, *ptr2;
-	ptr = NULL;
-	ptr2 = NULL;
 
 	printf("*** TEST queue_iterator4 ***\n");
 
-    /* Initialize the queue and enqueue items */
     q = queue_create();
     for (i = 0; i < sizeof(data) / sizeof(data[0]); i++)
         queue_enqueue(q, &data[i]);
 
-    /* Add value '1' to every item of the queue, delete item '42' */
     queue_iterate(q, inc_item, (void*)2, NULL);
     TEST_ASSERT(data[1] == 4);
     TEST_ASSERT(queue_length(q) == 7);
 
-    /* Find and get the item which is equal to value '5' */
-    ptr = NULL;     // result pointer *must* be reset first
+    ptr = NULL;
+	ptr2 = NULL;  
     queue_iterate(q, find_item, (void*)4, (void**)&ptr);
     TEST_ASSERT(ptr != NULL);
     TEST_ASSERT(*ptr == 4);
@@ -422,24 +412,20 @@ void test_iterator5(void)
     int data[] = {2, 42, 3, 42, 4, 42, 5, 42, 6, 42};
     size_t i;
     int *ptr, *ptr2;
-	ptr = NULL;
-	ptr2 = NULL;
 
 	printf("*** TEST queue_iterator5 ***\n");
 
-    /* Initialize the queue and enqueue items */
     q = queue_create();
     for (i = 0; i < sizeof(data) / sizeof(data[0]); i++)
         queue_enqueue(q, &data[i]);
 
-    /* Add value '1' to every item of the queue, delete item '42' */
     queue_iterate(q, inc_item, (void*)10, NULL);
     TEST_ASSERT(data[1] == 42);
 	TEST_ASSERT(data[0] == 12);
     TEST_ASSERT(queue_length(q) == 5);
 
-    /* Find and get the item which is equal to value '5' */
-    ptr = NULL;     // result pointer *must* be reset first
+    ptr = NULL;
+	ptr2 = NULL;
     queue_iterate(q, find_item, (void*)16, (void**)&ptr);
 	queue_iterate(q, find_item, (void*)12, (void**)&ptr2);
     TEST_ASSERT(ptr != NULL);
