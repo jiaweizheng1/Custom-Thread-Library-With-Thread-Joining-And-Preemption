@@ -157,6 +157,10 @@ int queue_iterate(queue_t queue, queue_func_t func, void *arg, void **data)
 	{
 
 	}
+	if(arg != NULL && data != NULL) //delete
+	{
+
+	}
 	
 	return -1;
 }

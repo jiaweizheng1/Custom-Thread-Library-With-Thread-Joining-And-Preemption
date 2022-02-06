@@ -102,7 +102,7 @@ void test_queue_delete_nonexist(void)
 	int data4 = 6, data5 = 7;
 	queue_t q;
 
-	printf("*** TEST queue_delete_beg ***\n");
+	printf("*** TEST queue_delete_nonexist ***\n");
 
 	q = queue_create();
 	queue_enqueue(q, &data);
@@ -113,6 +113,34 @@ void test_queue_delete_nonexist(void)
 	queue_dequeue(q, (void**)&ptr);
 	queue_dequeue(q, (void**)&ptr2);
 	queue_dequeue(q, (void**)&ptr3);
+	queue_destroy(q);
+}
+
+//delete complex
+void test_queue_delete_complex(void)
+{
+	int data = 3, data2 = 4, data3 = 5, data4 = 4, data5 = 4, data6 = 6, *ptr, *ptr2, *ptr3, *ptr4;
+	queue_t q;
+
+	printf("*** TEST queue_delete_complex ***\n");
+
+	q = queue_create();
+	queue_enqueue(q, &data);
+	queue_enqueue(q, &data2);
+	queue_enqueue(q, &data3);
+	queue_enqueue(q, &data4);
+	queue_enqueue(q, &data5);
+	queue_enqueue(q, &data6);
+	queue_delete(q, &data2);
+	queue_dequeue(q, (void**)&ptr);
+	queue_delete(q, &data4);
+	queue_dequeue(q, (void**)&ptr2);
+	queue_dequeue(q, (void**)&ptr3);
+	queue_dequeue(q, (void**)&ptr4);
+	TEST_ASSERT(ptr == &data);
+	TEST_ASSERT(ptr2 == &data3);
+	TEST_ASSERT(ptr3 == &data5);
+	TEST_ASSERT(ptr4 == &data6);
 	queue_destroy(q);
 }
 
@@ -162,7 +190,7 @@ void test_queue_delete_mid2(void)
 	int data = 3, data2 = 4, data3 = 5, *ptr, *ptr3;
 	queue_t q;
 
-	printf("*** TEST queue_delete_mid ***\n");
+	printf("*** TEST queue_delete_mid2 ***\n");
 
 	q = queue_create();
 	queue_enqueue(q, &data);
@@ -202,7 +230,7 @@ void test_queue_delete_end2(void)
 	int data = 3, data2 = 4, data3 = 5, *ptr, *ptr2;
 	queue_t q;
 
-	printf("*** TEST queue_delete_end ***\n");
+	printf("*** TEST queue_delete_end2 ***\n");
 
 	q = queue_create();
 	queue_enqueue(q, &data);
@@ -222,7 +250,7 @@ void test_queue_delete_end3(void)
 	int data = 3, data2 = 4, data3 = 5, *ptr, *ptr2;
 	queue_t q;
 
-	printf("*** TEST queue_delete_end ***\n");
+	printf("*** TEST queue_delete_end3 ***\n");
 
 	q = queue_create();
 	queue_enqueue(q, &data);
@@ -244,6 +272,7 @@ int main(void)
 	test_queue_complex();
 	test_queue_complex2();
 	test_queue_delete_nonexist();
+	test_queue_delete_complex();
 	test_queue_delete_beg();
 	test_queue_delete_mid();
 	test_queue_delete_mid2();
