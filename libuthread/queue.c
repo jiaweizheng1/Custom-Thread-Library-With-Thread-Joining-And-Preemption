@@ -167,7 +167,10 @@ int queue_iterate(queue_t queue, queue_func_t func, void *arg, void **data)
 			}
 		}
 
-		*data = temp_prev_node_ptr->data;
+		if(data != NULL)
+		{
+			*data = temp_prev_node_ptr->data;
+		}
 		return 0;
 	}
 	
