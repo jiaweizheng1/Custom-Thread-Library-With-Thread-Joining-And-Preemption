@@ -11,39 +11,51 @@
 #include "uthread.h"
 
 /* TODO */
+#include <unistd.h>	//sleep
 #include "queue.h"
-typedef struct tcb* tcb_t;
+
+typedef enum {RUNNING, READY, BLOCKED, EXITED} state_t;
+
+ucontext_t ctx[USHRT_MAX];
+
+typedef struct tcb tcb_t;
 
 struct tcb
 {
-	uthread_t TID;
-	int state;	//IDK 0=running, 1=ready, 2=blocked
-	uthread_ctx_t* ctx;	//IDK is this stack + registers?
+	uthread_t mytid;
+	state_t mystate;
+	uthread_ctx_t myctx;
 };
 
-queue_t scheduler;
+int print_item_info(queue_t q, void *data, void *arg)
+{
+	(void)q;
+	(void)arg;
+	struct tcb* a = data;
 
-uthread_t GLOBAL_TID_COUNT = 0;
+	printf("tid %d\n", a->mytid);
+	printf("state %d\n", a->mystate);
+
+	return 0;
+}
+
+queue_t scheduler;
 
 int uthread_start(int preempt)
 {
 	if(preempt == 0)
 	{
-		scheduler = queue_create();
-		tcb_t tcb_main = (tcb_t)malloc(sizeof(struct tcb));
-		int retval = queue_enqueue(scheduler, &tcb_main);
-
-		if(tcb_main == NULL || scheduler == NULL || retval == -1) return -1;
-
-		tcb_main->TID = GLOBAL_TID_COUNT;
-		tcb_main->state = 0;
-		GLOBAL_TID_COUNT++;
-		return 0;
 	}
-	else if(preempt == 1)
-	{
 
-	}
+	scheduler = queue_create();
+	tcb_t* tcb_main = (tcb_t*)malloc(sizeof(struct tcb));
+
+	//if(tcb_main == NULL || scheduler == NULL) return -1;
+
+	tcb_main->mytid = 5;
+	tcb_main->mystate = RUNNING;
+	queue_enqueue(scheduler, tcb_main);
+	return 0;
 
 	return -1;
 }
@@ -60,16 +72,16 @@ int uthread_stop(void)
 
 int uthread_create(uthread_func_t func)
 {
-	tcb_t tcb_thread = (tcb_t)malloc(sizeof(struct tcb));
-	int retval = queue_enqueue(scheduler, &tcb_thread);
+	tcb_t* tcb_thread = (tcb_t*)malloc(sizeof(struct tcb));
 
-	if(tcb_thread == NULL || retval == -1 || GLOBAL_TID_COUNT == USHRT_MAX) return -1; //IDK overflow when to negative number?
+	//if(tcb_thread == NULL || GLOBAL_TID_COUNT == USHRT_MAX) //return -1;
 
-	uthread_ctx_init(tcb_thread->ctx, uthread_ctx_alloc_stack(), func);
-	tcb_thread->TID = GLOBAL_TID_COUNT;
-	tcb_thread->state = 1;
-	GLOBAL_TID_COUNT++;
-	return tcb_thread->TID;
+	tcb_thread->mytid = 3;
+	tcb_thread->mystate = READY;
+	uthread_ctx_init(&tcb_thread->myctx, uthread_ctx_alloc_stack(), func);
+	queue_enqueue(scheduler, tcb_thread);
+
+	return tcb_thread->mytid;
 }
 
 void uthread_yield(void)
@@ -94,12 +106,7 @@ void uthread_exit(int retval)
 
 int uthread_join(uthread_t tid, int *retval)
 {
-	struct tcb* tcb;
-	struct tcb* tcb_next;
-	queue_dequeue(scheduler, (void**)&tcb);
-	queue_dequeue(scheduler, (void**)&tcb_next);
-
-	uthread_ctx_switch(tcb->ctx, tcb_next->ctx);
+	queue_iterate(scheduler, print_item_info, NULL, NULL);
 
 	if(tid == 0 || retval == 0)
 	{

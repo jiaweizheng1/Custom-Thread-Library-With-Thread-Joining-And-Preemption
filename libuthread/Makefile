@@ -5,7 +5,7 @@ objs := context.o queue.o uthread.o preempt.o
 
 #compile flags
 CC := gcc
-CFLAGS := -Wall -Wextra -Werror
+CFLAGS := -Wall -Wextra -Werror -MMD
 
 #more info compile flag
 ifneq ($(V), 1)
@@ -18,6 +18,9 @@ CFLAGS += -O2
 else
 CFLAGS += -g
 endif
+
+deps := $(patsubst %.o,%.d,$(objs))
+-include $(deps)
 
 all: $(lib)
 
