@@ -9,14 +9,13 @@
 
 #include "private.h"
 #include "uthread.h"
-
-/* TODO */
-#include <unistd.h>	//sleep
 #include "queue.h"
 
-typedef enum {RUNNING, READY, BLOCKED, EXITED} state_t;
+queue_t scheduler;
 
-ucontext_t ctx[USHRT_MAX];
+uthread_t global_tid_size; 
+
+typedef enum {RUNNING, READY, BLOCKED, EXITED} state_t;
 
 typedef struct tcb tcb_t;
 
@@ -25,21 +24,76 @@ struct tcb
 	uthread_t mytid;
 	state_t mystate;
 	uthread_ctx_t myctx;
+	int myexit;
 };
 
-int print_item_info(queue_t q, void *data, void *arg)
+int print_item_info(queue_t q, void *data, void *arg)	//for debugging
 {
 	(void)q;
 	(void)arg;
-	struct tcb* a = data;
+	struct tcb* thread = data;
 
-	printf("tid %d\n", a->mytid);
-	printf("state %d\n", a->mystate);
+	printf("tid %d\n", thread->mytid);
+	printf("state %d\n", thread->mystate);
+	printf("exit status %d\n", thread->myexit);
 
 	return 0;
 }
 
-queue_t scheduler;
+int find_next_available_thread(queue_t q, void *data, void *arg)
+{
+	(void)q;
+	(void)arg;
+	struct tcb* thread = data;
+
+	if(thread->mystate == READY)
+	{
+		return 1;
+	}
+	else
+	{
+		struct tcb* requeue_thread;
+		queue_dequeue(scheduler, (void**)&requeue_thread);
+		queue_enqueue(scheduler, requeue_thread);
+		return 0;
+	}
+}
+
+int return_head(queue_t q, void *data, void *arg)
+{
+	(void)q;
+	(void)data;
+	(void)arg;
+	
+	return 1;
+}
+
+int requeue_head(queue_t q, void *data, void *arg)
+{
+	(void)q;
+	(void)data;
+	(void)arg;
+	
+	struct tcb* requeue_thread;
+	queue_dequeue(scheduler, (void**)&requeue_thread);
+	queue_enqueue(scheduler, requeue_thread);
+
+	return 1;
+}
+
+int find_thread(queue_t q, void *data, void *arg)
+{
+	(void)q;
+	uthread_t tid = (uthread_t)(long) arg;	//triple cast
+	struct tcb* thread = data;
+
+	if(thread->mytid == tid)
+	{
+		return 1;
+	}
+
+	return 0;
+}
 
 int uthread_start(int preempt)
 {
@@ -52,9 +106,10 @@ int uthread_start(int preempt)
 
 	//if(tcb_main == NULL || scheduler == NULL) return -1;
 
-	tcb_main->mytid = 5;
-	tcb_main->mystate = RUNNING;
 	queue_enqueue(scheduler, tcb_main);
+	global_tid_size=0;
+	tcb_main->mytid = global_tid_size++;
+	tcb_main->mystate = RUNNING;
 	return 0;
 
 	return -1;
@@ -76,23 +131,34 @@ int uthread_create(uthread_func_t func)
 
 	//if(tcb_thread == NULL || GLOBAL_TID_COUNT == USHRT_MAX) //return -1;
 
-	tcb_thread->mytid = 3;
+	queue_enqueue(scheduler, tcb_thread);
+	tcb_thread->mytid = global_tid_size++;
 	tcb_thread->mystate = READY;
 	uthread_ctx_init(&tcb_thread->myctx, uthread_ctx_alloc_stack(), func);
-	queue_enqueue(scheduler, tcb_thread);
 
 	return tcb_thread->mytid;
 }
 
 void uthread_yield(void)
 {
-	/* TODO */
+	struct tcb* ptr_curr;
+	struct tcb* ptr_next;
+	queue_iterate(scheduler, requeue_head, NULL, (void**)&ptr_curr);
+	queue_iterate(scheduler, find_next_available_thread, NULL, (void**)&ptr_next);
+	if(ptr_curr->mystate == RUNNING)
+	{
+		ptr_curr->mystate=READY;
+	}
+	ptr_next->mystate=RUNNING;
+	printf("running tid %d\n", ptr_next->mytid);
+	uthread_ctx_switch(&ptr_curr->myctx, &ptr_next->myctx);
 }
 
 uthread_t uthread_self(void)
 {
-	//return scheduler->head->data->TID;
-	return -1;
+	struct tcb* ptr_curr;
+	queue_iterate(scheduler, return_head, NULL, (void**)&ptr_curr);
+	return ptr_curr->mytid;
 }
 
 void uthread_exit(int retval)
@@ -101,12 +167,31 @@ void uthread_exit(int retval)
 	{
 
 	}
-	exit(0);	//IDK
+	struct tcb* ptr_curr;
+	queue_iterate(scheduler, return_head, NULL, (void**)&ptr_curr);
+	ptr_curr->mystate = EXITED;
+	ptr_curr->myexit = retval;
+	printf("tid %d has exited\n", ptr_curr->mytid);
+	uthread_yield();
 }
 
 int uthread_join(uthread_t tid, int *retval)
 {
-	queue_iterate(scheduler, print_item_info, NULL, NULL);
+	struct tcb* ptr_curr;
+	struct tcb* ptr_wait_thread;
+	queue_iterate(scheduler, return_head, NULL, (void**)&ptr_curr);
+	queue_iterate(scheduler, find_thread, (void*)(long)tid, (void**)&ptr_wait_thread); //not sure if int casting is needed
+
+	printf("waiting for tid %d\n", ptr_wait_thread->mytid);
+	while(ptr_wait_thread->mystate != EXITED)
+	{
+		uthread_yield();
+	}
+	printf("done waiting for %d\n", ptr_wait_thread->mytid);
+	
+	retval = &ptr_wait_thread->myexit;
+
+	return 0;
 
 	if(tid == 0 || retval == 0)
 	{

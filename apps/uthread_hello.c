@@ -24,5 +24,7 @@ int main(void)
 	uthread_join(tid, NULL);
 	uthread_stop();
 
+	printf("main exiting\n");
+
 	return 0;
 }
