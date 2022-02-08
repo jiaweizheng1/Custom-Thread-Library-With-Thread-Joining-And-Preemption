@@ -41,9 +41,10 @@ int thread1(void)
 
 int main(void)
 {
+	int retval1;
 	uthread_start(0);
-	uthread_join(uthread_create(thread1), NULL);
-	uthread_join(3, NULL);
+	uthread_join(uthread_create(thread1), &retval1);
+	printf("%d\n", retval1);
 	uthread_stop();
 
 	printf("main exiting\n");

@@ -11,11 +11,6 @@
 #include "uthread.h"
 #include "queue.h"
 
-queue_t scheduler;
-queue_t blocked;
-
-uthread_t global_tid_size; 
-
 typedef enum {RUNNING, READY, BLOCKED, EXITED} state_t;
 
 typedef struct tcb tcb_t;
@@ -26,7 +21,18 @@ struct tcb
 	state_t mystate;
 	uthread_ctx_t myctx;
 	int myexit;
+	int myjoiner;	//initially set to -1 for invalid tid as joiner
 };
+
+tcb_t* curr_thread;
+
+queue_t q_scheduler;
+
+queue_t q_blocked;
+
+queue_t q_exited;
+
+uthread_t global_tid_size; 
 
 int print_item_info(queue_t q, void *data, void *arg)	//for debugging
 {
@@ -37,17 +43,18 @@ int print_item_info(queue_t q, void *data, void *arg)	//for debugging
 	printf("tid %d\n", thread->mytid);
 	printf("state %d\n", thread->mystate);
 	printf("exit status %d\n", thread->myexit);
+	printf("joiner %d\n", thread->myjoiner);
 
 	return 0;
 }
 
-int find_next_available_ready_thread(queue_t q, void *data, void *arg)
+int find_next_ready_thread(queue_t q, void *data, void *arg)
 {
 	(void)q;
 	(void)arg;
 	struct tcb* thread = data;
 
-	if(thread->mystate != RUNNING && thread->mystate != EXITED)
+	if(thread->mystate == READY)
 	{
 		return 1;
 		
@@ -55,8 +62,8 @@ int find_next_available_ready_thread(queue_t q, void *data, void *arg)
 	else
 	{
 		struct tcb* requeue_thread;
-		queue_dequeue(scheduler, (void**)&requeue_thread);
-		queue_enqueue(scheduler, requeue_thread);
+		queue_dequeue(q_scheduler, (void**)&requeue_thread);
+		queue_enqueue(q_scheduler, requeue_thread);
 		return 0;
 	}
 }
@@ -67,19 +74,6 @@ int return_head(queue_t q, void *data, void *arg)
 	(void)data;
 	(void)arg;
 	
-	return 1;
-}
-
-int requeue_head(queue_t q, void *data, void *arg)	//not used idk
-{
-	(void)q;
-	(void)data;
-	(void)arg;
-	
-	struct tcb* requeue_thread;
-	queue_dequeue(scheduler, (void**)&requeue_thread);
-	queue_enqueue(scheduler, requeue_thread);
-
 	return 1;
 }
 
@@ -103,15 +97,18 @@ int uthread_start(int preempt)
 	{
 	}
 
-	scheduler = queue_create();
-	blocked = queue_create();
+	q_scheduler = queue_create();
+	q_blocked = queue_create();
+	q_exited = queue_create();
 	tcb_t* tcb_main = (tcb_t*)malloc(sizeof(struct tcb));
+	curr_thread = tcb_main; 
 
-	//if(tcb_main == NULL || scheduler == NULL) return -1;
+	//if(tcb_main == NULL || q_scheduler == NULL) return -1;
 
-	queue_enqueue(scheduler, tcb_main);
+	queue_enqueue(q_scheduler, tcb_main);
 	global_tid_size=0;
 	tcb_main->mytid = global_tid_size++;
+	tcb_main->myjoiner = -1;
 	tcb_main->mystate = RUNNING;
 	return 0;
 
@@ -120,9 +117,9 @@ int uthread_start(int preempt)
 
 int uthread_stop(void)
 {
-	if(queue_length(scheduler) == 1 && queue_dequeue(scheduler, NULL) == 0 && queue_destroy(scheduler) == 0)	//only main thread is scheduled
+	if(queue_length(q_scheduler) == 1 && queue_dequeue(q_scheduler, NULL) == 0 && queue_destroy(q_scheduler) == 0)	//only main thread is scheduled
 	{
-		return 0; //free the scheduler after dequeueing main thread
+		return 0; //free the q_scheduler after dequeueing main thread
 	}
 
 	return -1;
@@ -134,8 +131,9 @@ int uthread_create(uthread_func_t func)
 
 	//if(tcb_thread == NULL || GLOBAL_TID_COUNT == USHRT_MAX) //return -1;
 
-	queue_enqueue(scheduler, tcb_thread);
+	queue_enqueue(q_scheduler, tcb_thread);
 	tcb_thread->mytid = global_tid_size++;
+	tcb_thread->myjoiner = -1;
 	tcb_thread->mystate = READY;
 	uthread_ctx_init(&tcb_thread->myctx, uthread_ctx_alloc_stack(), func);
 
@@ -144,24 +142,35 @@ int uthread_create(uthread_func_t func)
 
 void uthread_yield(void)
 {
-	struct tcb* ptr_curr;
-	struct tcb* ptr_next = NULL;
-	queue_iterate(scheduler, return_head, NULL, (void**)&ptr_curr);
-	queue_iterate(scheduler, find_next_available_ready_thread, NULL, (void**)&ptr_next);
-	if(ptr_curr->mystate != EXITED)
+	struct tcb* prev_thread = curr_thread;
+
+	if(prev_thread->mystate == EXITED)	//move curr thread to exited queue
 	{
-		ptr_curr->mystate=READY;
+		queue_dequeue(q_scheduler, (void**)&prev_thread);
+		queue_enqueue(q_exited, prev_thread);
+		queue_iterate(q_scheduler, find_next_ready_thread, NULL, (void**)&curr_thread); //update curr_thread to next thread to run
 	}
-	ptr_next->mystate=RUNNING;
-	printf("running tid %d\n", ptr_next->mytid);
-	uthread_ctx_switch(&ptr_curr->myctx, &ptr_next->myctx);
+	else if(prev_thread->mystate == BLOCKED)	//move cur thread to blocked queue
+	{
+		queue_dequeue(q_scheduler, (void**)&prev_thread);
+		queue_enqueue(q_blocked, prev_thread);
+		queue_iterate(q_scheduler, find_next_ready_thread, NULL, (void**)&curr_thread); //update curr_thread to next thread to run
+	}
+	else	//reschedule current thread to end of q_scheduler
+	{
+		queue_dequeue(q_scheduler, (void**)&prev_thread);
+		queue_enqueue(q_scheduler, prev_thread);
+		prev_thread->mystate = READY;
+	}
+	queue_iterate(q_scheduler, find_next_ready_thread, NULL, (void**)&curr_thread); //update curr_thread to next thread to run
+	curr_thread->mystate=RUNNING;
+	printf("running tid %d\n", curr_thread->mytid);
+	uthread_ctx_switch(&prev_thread->myctx, &curr_thread->myctx);
 }
 
 uthread_t uthread_self(void)
 {
-	struct tcb* ptr_curr;
-	queue_iterate(scheduler, return_head, NULL, (void**)&ptr_curr);
-	return ptr_curr->mytid;
+	return curr_thread->mytid;
 }
 
 void uthread_exit(int retval)
@@ -170,32 +179,44 @@ void uthread_exit(int retval)
 	{
 
 	}
-	struct tcb* ptr_curr;
-	queue_iterate(scheduler, return_head, NULL, (void**)&ptr_curr);
-	ptr_curr->mystate = EXITED;
-	ptr_curr->myexit = retval;
-	printf("tid %d has exited\n", ptr_curr->mytid);
+	curr_thread->mystate = EXITED;
+	curr_thread->myexit = retval;
+	if(curr_thread->myjoiner != -1)	//schedule parent back to end of q_scheduler
+	{
+		struct tcb* ptr_parent;
+		queue_iterate(q_blocked, find_thread, (void*)(long)curr_thread->myjoiner, (void**)&ptr_parent);
+		queue_delete(q_blocked, ptr_parent);
+		queue_enqueue(q_scheduler, ptr_parent);
+		ptr_parent->mystate = READY;
+	}
+	printf("tid %d has exited\n", curr_thread->mytid);
 	uthread_yield();
 }
 
 int uthread_join(uthread_t tid, int *retval)
 {
-	struct tcb* ptr_curr;
 	struct tcb* ptr_wait_thread;
-	queue_iterate(scheduler, return_head, NULL, (void**)&ptr_curr);
-	queue_iterate(scheduler, find_thread, (void*)(long)tid, (void**)&ptr_wait_thread); //not sure if int casting is needed
+	queue_iterate(q_scheduler, find_thread, (void*)(long)tid, (void**)&ptr_wait_thread); //not sure if int casting is needed
+	ptr_wait_thread->myjoiner = curr_thread->mytid;
+	curr_thread->mystate = BLOCKED;
 	printf("waiting for tid %d\n", ptr_wait_thread->mytid);
-	while(ptr_wait_thread->mystate != EXITED)
-	{
-		uthread_yield(); //HERE; somewhere around here is the problem and need to implement priority of ready over blocked 
-		//OR move blocked queue to back of queue after it becomes unblocked
-	}
-
-	queue_iterate(scheduler, print_item_info, NULL, NULL);
+	
+	uthread_yield(); 
 	
 	printf("done waiting for %d\n", ptr_wait_thread->mytid);
-	
+
+	//child has exited
 	retval = &ptr_wait_thread->myexit;
+	printf("%d\n", ptr_wait_thread->myexit);
+	printf("%d\n", *retval);
+	printf("scheduler info\n");
+	queue_iterate(q_scheduler, print_item_info, NULL, NULL);
+	printf("blocked info\n");
+	queue_iterate(q_blocked, print_item_info, NULL, NULL);
+	printf("exited info\n");
+	queue_iterate(q_exited, print_item_info, NULL, NULL);
+	queue_delete(q_exited, ptr_wait_thread);
+	free(ptr_wait_thread);
 
 	return 0;
 
