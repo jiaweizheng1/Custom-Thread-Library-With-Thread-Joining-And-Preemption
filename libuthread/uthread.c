@@ -12,6 +12,7 @@
 #include "queue.h"
 
 queue_t scheduler;
+queue_t blocked;
 
 uthread_t global_tid_size; 
 
@@ -40,15 +41,16 @@ int print_item_info(queue_t q, void *data, void *arg)	//for debugging
 	return 0;
 }
 
-int find_next_available_thread(queue_t q, void *data, void *arg)
+int find_next_available_ready_thread(queue_t q, void *data, void *arg)
 {
 	(void)q;
 	(void)arg;
 	struct tcb* thread = data;
 
-	if(thread->mystate == READY)
+	if(thread->mystate != RUNNING && thread->mystate != EXITED)
 	{
 		return 1;
+		
 	}
 	else
 	{
@@ -68,7 +70,7 @@ int return_head(queue_t q, void *data, void *arg)
 	return 1;
 }
 
-int requeue_head(queue_t q, void *data, void *arg)
+int requeue_head(queue_t q, void *data, void *arg)	//not used idk
 {
 	(void)q;
 	(void)data;
@@ -102,6 +104,7 @@ int uthread_start(int preempt)
 	}
 
 	scheduler = queue_create();
+	blocked = queue_create();
 	tcb_t* tcb_main = (tcb_t*)malloc(sizeof(struct tcb));
 
 	//if(tcb_main == NULL || scheduler == NULL) return -1;
@@ -142,10 +145,10 @@ int uthread_create(uthread_func_t func)
 void uthread_yield(void)
 {
 	struct tcb* ptr_curr;
-	struct tcb* ptr_next;
-	queue_iterate(scheduler, requeue_head, NULL, (void**)&ptr_curr);
-	queue_iterate(scheduler, find_next_available_thread, NULL, (void**)&ptr_next);
-	if(ptr_curr->mystate == RUNNING)
+	struct tcb* ptr_next = NULL;
+	queue_iterate(scheduler, return_head, NULL, (void**)&ptr_curr);
+	queue_iterate(scheduler, find_next_available_ready_thread, NULL, (void**)&ptr_next);
+	if(ptr_curr->mystate != EXITED)
 	{
 		ptr_curr->mystate=READY;
 	}
@@ -181,12 +184,15 @@ int uthread_join(uthread_t tid, int *retval)
 	struct tcb* ptr_wait_thread;
 	queue_iterate(scheduler, return_head, NULL, (void**)&ptr_curr);
 	queue_iterate(scheduler, find_thread, (void*)(long)tid, (void**)&ptr_wait_thread); //not sure if int casting is needed
-
 	printf("waiting for tid %d\n", ptr_wait_thread->mytid);
 	while(ptr_wait_thread->mystate != EXITED)
 	{
-		uthread_yield();
+		uthread_yield(); //HERE; somewhere around here is the problem and need to implement priority of ready over blocked 
+		//OR move blocked queue to back of queue after it becomes unblocked
 	}
+
+	queue_iterate(scheduler, print_item_info, NULL, NULL);
+	
 	printf("done waiting for %d\n", ptr_wait_thread->mytid);
 	
 	retval = &ptr_wait_thread->myexit;
