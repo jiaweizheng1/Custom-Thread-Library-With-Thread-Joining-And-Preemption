@@ -7,11 +7,17 @@
 #include <stdlib.h>
 #include <sys/time.h>
 
+#include <string.h>
+
 #include "private.h"
 #include "uthread.h"
 #include "queue.h"
 
 typedef enum {RUNNING, READY, BLOCKED, EXITED} state_t;
+
+static ucontext_t ctx[USHRT_MAX];
+
+static void* top_of_stack[USHRT_MAX];
 
 typedef struct tcb tcb_t;
 
@@ -19,20 +25,49 @@ struct tcb
 {
 	uthread_t mytid;
 	state_t mystate;
-	uthread_ctx_t myctx;
 	int myexit;
 	int myjoiner;	//initially set to -1 for invalid tid as joiner
 };
 
-tcb_t* curr_thread;
+static tcb_t* curr_thread;
 
-queue_t q_scheduler;
+static queue_t q_scheduler;
 
-queue_t q_blocked;
+static queue_t q_blocked;
 
-queue_t q_exited;
+static queue_t q_exited;
 
-uthread_t global_tid_size; 
+static uthread_t global_tid_size; 
+
+static int find_next_ready_thread(queue_t q, void *data, void *arg)
+{
+	(void)q;
+	(void)arg;
+	struct tcb* thread = data;
+
+	if(thread->mystate == READY)
+	{
+		return 1;
+		
+	}
+	struct tcb* requeue_thread;
+	queue_dequeue(q, (void**)&requeue_thread);
+	queue_enqueue(q, requeue_thread);
+	return 0;
+}
+
+static int find_thread(queue_t q, void *data, void *arg)
+{
+	(void)q;
+	uthread_t tid = (uthread_t)(int)(long) arg;	//triple cast
+	struct tcb* thread = data;
+
+	if(thread->mytid == tid)
+	{
+		return 1;
+	}
+	return 0;
+}
 
 int print_item_info(queue_t q, void *data, void *arg)	//for debugging
 {
@@ -48,78 +83,43 @@ int print_item_info(queue_t q, void *data, void *arg)	//for debugging
 	return 0;
 }
 
-int find_next_ready_thread(queue_t q, void *data, void *arg)
-{
-	(void)q;
-	(void)arg;
-	struct tcb* thread = data;
-
-	if(thread->mystate == READY)
-	{
-		return 1;
-		
-	}
-	else
-	{
-		struct tcb* requeue_thread;
-		queue_dequeue(q_scheduler, (void**)&requeue_thread);
-		queue_enqueue(q_scheduler, requeue_thread);
-		return 0;
-	}
-}
-
-int return_head(queue_t q, void *data, void *arg)
-{
-	(void)q;
-	(void)data;
-	(void)arg;
-	
-	return 1;
-}
-
-int find_thread(queue_t q, void *data, void *arg)
-{
-	(void)q;
-	uthread_t tid = (uthread_t)(long) arg;	//triple cast
-	struct tcb* thread = data;
-
-	if(thread->mytid == tid)
-	{
-		return 1;
-	}
-
-	return 0;
-}
-
 int uthread_start(int preempt)
 {
-	if(preempt == 0)
-	{
-	}
-
 	q_scheduler = queue_create();
 	q_blocked = queue_create();
 	q_exited = queue_create();
 	tcb_t* tcb_main = (tcb_t*)malloc(sizeof(struct tcb));
+
+	if(q_scheduler == NULL || q_blocked == NULL || q_exited == NULL || tcb_main == NULL || queue_enqueue(q_scheduler, tcb_main) != 0) return -1;
+
 	curr_thread = tcb_main; 
-
-	//if(tcb_main == NULL || q_scheduler == NULL) return -1;
-
-	queue_enqueue(q_scheduler, tcb_main);
 	global_tid_size=0;
 	tcb_main->mytid = global_tid_size++;
+	top_of_stack[tcb_main->mytid] = uthread_ctx_alloc_stack();
+	uthread_ctx_init(&ctx[tcb_main->mytid], top_of_stack[tcb_main->mytid], NULL);
 	tcb_main->myjoiner = -1;
 	tcb_main->mystate = RUNNING;
-	return 0;
 
-	return -1;
+	if(preempt)
+	{
+		preempt_start();
+	}
+
+	return 0;
 }
 
 int uthread_stop(void)
 {
-	if(queue_length(q_scheduler) == 1 && queue_dequeue(q_scheduler, NULL) == 0 && queue_destroy(q_scheduler) == 0)	//only main thread is scheduled
+	if(curr_thread->mytid == (uthread_t)0 && queue_length(q_scheduler) == 1 && queue_length(q_blocked) == 0 && queue_length(q_exited) == 0 && queue_dequeue(q_scheduler, (void**)&curr_thread) == 0)	//only main thread is left
 	{
-		return 0; //free the q_scheduler after dequeueing main thread
+		preempt_stop();
+		uthread_ctx_destroy_stack(top_of_stack[curr_thread->mytid]);
+		queue_dequeue(q_scheduler, NULL);
+		free(curr_thread);
+		queue_destroy(q_scheduler);
+		queue_destroy(q_blocked);
+		queue_destroy(q_exited);
+		return 0;
 	}
 
 	return -1;
@@ -129,15 +129,17 @@ int uthread_create(uthread_func_t func)
 {
 	tcb_t* tcb_thread = (tcb_t*)malloc(sizeof(struct tcb));
 
-	//if(tcb_thread == NULL || GLOBAL_TID_COUNT == USHRT_MAX) //return -1;
+	if(tcb_thread != NULL && global_tid_size != USHRT_MAX && queue_enqueue(q_scheduler, tcb_thread) == 0)
+	{
+		tcb_thread->mytid = global_tid_size++;
+		top_of_stack[tcb_thread->mytid] = uthread_ctx_alloc_stack();
+		uthread_ctx_init(&ctx[tcb_thread->mytid], top_of_stack[tcb_thread->mytid], func);
+		tcb_thread->myjoiner = -1;
+		tcb_thread->mystate = READY;
+		return tcb_thread->mytid;
+	}
 
-	queue_enqueue(q_scheduler, tcb_thread);
-	tcb_thread->mytid = global_tid_size++;
-	tcb_thread->myjoiner = -1;
-	tcb_thread->mystate = READY;
-	uthread_ctx_init(&tcb_thread->myctx, uthread_ctx_alloc_stack(), func);
-
-	return tcb_thread->mytid;
+	return -1;
 }
 
 void uthread_yield(void)
@@ -148,13 +150,11 @@ void uthread_yield(void)
 	{
 		queue_dequeue(q_scheduler, (void**)&prev_thread);
 		queue_enqueue(q_exited, prev_thread);
-		queue_iterate(q_scheduler, find_next_ready_thread, NULL, (void**)&curr_thread); //update curr_thread to next thread to run
 	}
 	else if(prev_thread->mystate == BLOCKED)	//move cur thread to blocked queue
 	{
 		queue_dequeue(q_scheduler, (void**)&prev_thread);
 		queue_enqueue(q_blocked, prev_thread);
-		queue_iterate(q_scheduler, find_next_ready_thread, NULL, (void**)&curr_thread); //update curr_thread to next thread to run
 	}
 	else	//reschedule current thread to end of q_scheduler
 	{
@@ -165,7 +165,7 @@ void uthread_yield(void)
 	queue_iterate(q_scheduler, find_next_ready_thread, NULL, (void**)&curr_thread); //update curr_thread to next thread to run
 	curr_thread->mystate=RUNNING;
 	printf("running tid %d\n", curr_thread->mytid);
-	uthread_ctx_switch(&prev_thread->myctx, &curr_thread->myctx);
+	uthread_ctx_switch(&ctx[prev_thread->mytid], &ctx[curr_thread->mytid]);
 }
 
 uthread_t uthread_self(void)
@@ -175,16 +175,12 @@ uthread_t uthread_self(void)
 
 void uthread_exit(int retval)
 {
-	if(retval == 0)
-	{
-
-	}
 	curr_thread->mystate = EXITED;
 	curr_thread->myexit = retval;
 	if(curr_thread->myjoiner != -1)	//schedule parent back to end of q_scheduler
 	{
 		struct tcb* ptr_parent;
-		queue_iterate(q_blocked, find_thread, (void*)(long)curr_thread->myjoiner, (void**)&ptr_parent);
+		queue_iterate(q_blocked, find_thread, (void*)(long)(int)curr_thread->myjoiner, (void**)&ptr_parent);
 		queue_delete(q_blocked, ptr_parent);
 		queue_enqueue(q_scheduler, ptr_parent);
 		ptr_parent->mystate = READY;
@@ -195,34 +191,31 @@ void uthread_exit(int retval)
 
 int uthread_join(uthread_t tid, int *retval)
 {
-	struct tcb* ptr_wait_thread;
-	queue_iterate(q_scheduler, find_thread, (void*)(long)tid, (void**)&ptr_wait_thread); //not sure if int casting is needed
-	ptr_wait_thread->myjoiner = curr_thread->mytid;
-	curr_thread->mystate = BLOCKED;
-	printf("waiting for tid %d\n", ptr_wait_thread->mytid);
-	
-	uthread_yield(); 
-	
-	printf("done waiting for %d\n", ptr_wait_thread->mytid);
+	if(tid == 0 || curr_thread->mytid == tid) return -1;
+	struct tcb* ptr_wait_thread = NULL;
+	queue_iterate(q_scheduler, find_thread, (void*)(long)(int)tid, (void**)&ptr_wait_thread); //not sure if int casting is needed
 
-	//child has exited
-	retval = &ptr_wait_thread->myexit;
-	printf("%d\n", ptr_wait_thread->myexit);
-	printf("%d\n", *retval);
-	printf("scheduler info\n");
-	queue_iterate(q_scheduler, print_item_info, NULL, NULL);
-	printf("blocked info\n");
-	queue_iterate(q_blocked, print_item_info, NULL, NULL);
-	printf("exited info\n");
-	queue_iterate(q_exited, print_item_info, NULL, NULL);
-	queue_delete(q_exited, ptr_wait_thread);
-	free(ptr_wait_thread);
-
-	return 0;
-
-	if(tid == 0 || retval == 0)
+	if(ptr_wait_thread != NULL)	//child is in q_scheduler
 	{
+		if(ptr_wait_thread->myjoiner != -1) return -1;	//child is already being joined
+		ptr_wait_thread->myjoiner = curr_thread->mytid;
+		curr_thread->mystate = BLOCKED;
+		uthread_yield(); 
 
 	}
-	return -1;
+	else	//child has already exited
+	{
+		queue_iterate(q_exited, find_thread, (void*)(long)(int)tid, (void**)&ptr_wait_thread); //not sure if int casting is needed
+		if(ptr_wait_thread == NULL) return -1; //cant find tid
+		if(ptr_wait_thread->myjoiner != -1) return -1;	//child is already being joined
+	}
+	
+	if(retval != NULL)
+	{
+		memcpy(retval, &ptr_wait_thread->myexit, sizeof(ptr_wait_thread->myexit));	//create a hard copy of the return value
+	}
+	uthread_ctx_destroy_stack(top_of_stack[ptr_wait_thread->mytid]);
+	queue_delete(q_exited, ptr_wait_thread);
+	free(ptr_wait_thread);
+	return 0;
 }

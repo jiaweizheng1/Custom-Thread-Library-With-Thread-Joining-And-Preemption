@@ -19,7 +19,7 @@ int thread3(void)
 {
 	uthread_yield();
 	printf("thread%d\n", uthread_self());
-	return 69;
+	return 0;
 }
 
 int thread2(void)
@@ -27,7 +27,7 @@ int thread2(void)
 	uthread_create(thread3);
 	uthread_yield();
 	printf("thread%d\n", uthread_self());
-	return 21;
+	return 0;
 }
 
 int thread1(void)
@@ -36,18 +36,14 @@ int thread1(void)
 	uthread_yield();
 	printf("thread%d\n", uthread_self());
 	uthread_yield();
-	return 777;
+	return 0;
 }
 
 int main(void)
 {
-	int retval1;
 	uthread_start(0);
-	uthread_join(uthread_create(thread1), &retval1);
-	printf("%d\n", retval1);
+	uthread_join(uthread_create(thread1), NULL);
 	uthread_stop();
-
-	printf("main exiting\n");
 
 	return 0;
 }
