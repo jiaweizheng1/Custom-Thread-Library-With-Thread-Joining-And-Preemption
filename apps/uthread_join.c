@@ -23,7 +23,7 @@ int thread2(void)
 int thread1(void)
 {
 	int retval;
-	uthread_join(uthread_create(thread2), &retval);
+	uthread_join(uthread_create(thread1), &retval);
 	printf("%d\n", retval);
 	uthread_yield();
 	printf("thread%d\n", uthread_self());

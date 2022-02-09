@@ -15,37 +15,34 @@
  */
 #define HZ 100
 
-sigset_t set;
+struct sigaction sa;
+struct itimerval timer;
 
 void alarm_handler (int signum)
 {
 	if(signum == SIGVTALRM)
 	{
 		uthread_yield();
+		printf("swapped\n");
 	}
 }
 
 void preempt_start()
 {
+	printf("preempt started\n");
  	//install alarm_handler as the signal handler for SIGVTALRM
-	struct sigaction sa;
-	struct itimerval timer;
+
 	sa.sa_handler = alarm_handler;
 	sigemptyset(&sa.sa_mask);
 	sa.sa_flags = 0;
 	sigaction(SIGVTALRM, &sa, NULL);
 
-	sigemptyset(&set);
-	sigaddset(&set, SIGVTALRM);
-
-	timer.it_value.tv_sec = 1;	//rn 1 sec, change to 10000 us later
-	timer.it_value.tv_usec = 0;
-	timer.it_interval.tv_sec = 1;
-	timer.it_interval.tv_usec = 0;
+	timer.it_value.tv_sec = 0;	//rn 1 sec, change to 10000 us later
+	timer.it_value.tv_usec = 10000;
+	timer.it_interval.tv_sec = 0;
+	timer.it_interval.tv_usec = 10000;
 	//start a virtual timer
 	setitimer (ITIMER_VIRTUAL, &timer, NULL);
-
-	while(1);
 }
 
 void preempt_stop(void)
@@ -57,10 +54,10 @@ void preempt_stop(void)
 
 void preempt_enable(void)
 {
-	sigprocmask(SIG_UNBLOCK, &set, NULL);
+	sigprocmask(SIG_UNBLOCK, &sa.sa_mask, NULL);
 }
 
 void preempt_disable(void)
 {
-	sigprocmask(SIG_BLOCK, &set, NULL);
+	sigprocmask(SIG_BLOCK, &sa.sa_mask, NULL);
 }

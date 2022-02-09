@@ -69,20 +69,6 @@ static int find_thread(queue_t q, void *data, void *arg)
 	return 0;
 }
 
-int print_item_info(queue_t q, void *data, void *arg)	//for debugging
-{
-	(void)q;
-	(void)arg;
-	struct tcb* thread = data;
-
-	printf("tid %d\n", thread->mytid);
-	printf("state %d\n", thread->mystate);
-	printf("exit status %d\n", thread->myexit);
-	printf("joiner %d\n", thread->myjoiner);
-
-	return 0;
-}
-
 int uthread_start(int preempt)
 {
 	q_scheduler = queue_create();
@@ -112,6 +98,7 @@ int uthread_stop(void)
 {
 	if(curr_thread->mytid == (uthread_t)0 && queue_length(q_scheduler) == 1 && queue_length(q_blocked) == 0 && queue_length(q_exited) == 0 && queue_dequeue(q_scheduler, (void**)&curr_thread) == 0)	//only main thread is left
 	{
+		preempt_disable();
 		preempt_stop();
 		uthread_ctx_destroy_stack(top_of_stack[curr_thread->mytid]);
 		queue_dequeue(q_scheduler, NULL);
@@ -144,6 +131,7 @@ int uthread_create(uthread_func_t func)
 
 void uthread_yield(void)
 {
+	preempt_enable();
 	struct tcb* prev_thread = curr_thread;
 
 	if(prev_thread->mystate == EXITED)	//move curr thread to exited queue
@@ -164,8 +152,9 @@ void uthread_yield(void)
 	}
 	queue_iterate(q_scheduler, find_next_ready_thread, NULL, (void**)&curr_thread); //update curr_thread to next thread to run
 	curr_thread->mystate=RUNNING;
-	printf("running tid %d\n", curr_thread->mytid);
-	uthread_ctx_switch(&ctx[prev_thread->mytid], &ctx[curr_thread->mytid]);
+	preempt_disable();
+	uthread_ctx_switch(&ctx[prev_thread->mytid], &ctx[curr_thread->mytid]);	
+	preempt_enable();
 }
 
 uthread_t uthread_self(void)
@@ -185,7 +174,6 @@ void uthread_exit(int retval)
 		queue_enqueue(q_scheduler, ptr_parent);
 		ptr_parent->mystate = READY;
 	}
-	printf("tid %d has exited\n", curr_thread->mytid);
 	uthread_yield();
 }
 
