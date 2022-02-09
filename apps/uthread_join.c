@@ -34,7 +34,7 @@ int thread1(void)
 int main(void)
 {
 	int retval;
-	uthread_start(0);
+	uthread_start(1);
 	uthread_join(uthread_create(thread1), &retval);
 	printf("%d\n", retval);
 	uthread_stop();

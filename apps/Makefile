@@ -3,6 +3,7 @@ programs := \
 	queue_tester_example.x \
 	uthread_hello.x \
 	uthread_join.x \
+	uthread_join_self.x \
 	uthread_yield.x \
 	test_preempt.x
 

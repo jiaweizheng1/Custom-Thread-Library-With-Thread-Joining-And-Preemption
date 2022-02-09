@@ -13,11 +13,10 @@ int func(void)
 
 int main(void)
 {
-	printf("main starts\n");
 	uthread_start(1); //start preemption
 	uthread_create(func);
 	uthread_join(uthread_create(func), NULL);
-	printf("main ends\n");
+	printf("main exiting\n");
 	uthread_stop();
 	return 0;
 }

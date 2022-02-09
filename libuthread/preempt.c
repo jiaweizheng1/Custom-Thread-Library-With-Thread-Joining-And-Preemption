@@ -14,6 +14,7 @@
  * 100Hz is 100 times per second
  */
 #define HZ 100
+#define us 10000	//100hz is 10000us
 
 struct sigaction sa;
 struct itimerval timer;
@@ -36,9 +37,9 @@ void preempt_start()
 
 	//set alarm interval
 	timer.it_value.tv_sec = 0;	//100hz is 10000 us
-	timer.it_value.tv_usec = 100*(HZ);
+	timer.it_value.tv_usec = 10000;
 	timer.it_interval.tv_sec = 0;
-	timer.it_interval.tv_usec = 100*(HZ);
+	timer.it_interval.tv_usec = 10000;
 	//start a virtual timer
 	setitimer (ITIMER_VIRTUAL, &timer, NULL);
 }

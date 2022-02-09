@@ -4,21 +4,18 @@
 
 #include "queue.h"
 
-//ref: https://www.tutorialspoint.com/cprogramming/c_typedef.htm
-//typedef struct queue* queue_t; //queue_t is a pointer to struct queue
-
 typedef struct node node_t;
 
 struct node
 {
-	void *data;
+	void *data;	//void * to some generalize data, string, char, int, etc
 	node_t *nxtnode;	//each node has a ptr to its data and a ptr to the nxtnode
 };
 
 struct queue 
 {
-	node_t *head, *tail;	//the queue has a ptrs to head and tail for easier enqueueing and dequeuing
-	int length;
+	node_t *head, *tail;	//the queue has ptrs to head and tail for easier enqueueing and dequeuing
+	int length;	//size variable for making queue_length() function O(1)
 };
 
 queue_t queue_create(void)
@@ -26,10 +23,10 @@ queue_t queue_create(void)
 	//only need to allocate space for the struct
 	queue_t queue = (queue_t)malloc(sizeof(struct queue));
 
-	if(queue != NULL)
+	if(queue != NULL)	//initialized queue variables
 	{
 		queue->head = NULL;
-		queue->tail = NULL;	//IDK very likely can delete because overwritten later anyways
+		queue->tail = NULL;
 		queue->length = 0;
 	}
 
@@ -38,7 +35,7 @@ queue_t queue_create(void)
 
 int queue_destroy(queue_t queue)
 {
-	if(queue->length == 0 && queue != NULL)
+	if(queue->length == 0 && queue != NULL)	//free queue once all nodes are deallocated
 	{
 		free(queue);
 		return 0;
@@ -82,8 +79,8 @@ int queue_dequeue(queue_t queue, void **data)
 	if(queue != NULL && data != NULL && queue->length != 0)
 	{
 		*data = queue->head->data;
-		struct node* temp_head_ptr = queue->head;
-		queue->head = queue->head->nxtnode;
+		struct node* temp_head_ptr = queue->head;	//a temporary ptr to the head
+		queue->head = queue->head->nxtnode;	//so we can delete the head after making another node the head
 		free(temp_head_ptr);
 		queue->length--;
 		return 0;
@@ -107,8 +104,8 @@ int queue_delete(queue_t queue, void *data)
 		}
 		else	//need to iterate because queue has atleast 2 nodes and head does not have the same data
 		{
-			struct node* temp_prev_node_ptr;
-			int found = 0;
+			struct node* temp_prev_node_ptr;	//iterate through queue with two ptrs so if a node is deleted, its easier to link
+			int found = 0;						//adjacent nodes back together
 
 			for(int i=1; (i < queue->length) && !found; i++)	//skip first node
 			{
@@ -146,8 +143,8 @@ int queue_iterate(queue_t queue, queue_func_t func, void *arg, void **data)
 {
 	if(queue == NULL || func == NULL) return -1;
 
-	node_t* curr = queue->head;
-
+	node_t* curr = queue->head;	//iterate through a queue in a similar fashion to queue_delete with two ptrs
+								//in case current node gets deleted we still have a ptr to the next node
 	while (curr != NULL)
 	{
 		void* curr_data = curr->data;
