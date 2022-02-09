@@ -18,46 +18,44 @@
 struct sigaction sa;
 struct itimerval timer;
 
-void alarm_handler (int signum)
+void alarm_handler(int signum)
 {
 	if(signum == SIGVTALRM)
 	{
 		uthread_yield();
-		printf("swapped\n");
 	}
 }
 
 void preempt_start()
 {
-	printf("preempt started\n");
  	//install alarm_handler as the signal handler for SIGVTALRM
-
 	sa.sa_handler = alarm_handler;
 	sigemptyset(&sa.sa_mask);
 	sa.sa_flags = 0;
 	sigaction(SIGVTALRM, &sa, NULL);
 
-	timer.it_value.tv_sec = 0;	//rn 1 sec, change to 10000 us later
-	timer.it_value.tv_usec = 10000;
+	//set alarm interval
+	timer.it_value.tv_sec = 0;	//100hz is 10000 us
+	timer.it_value.tv_usec = 100*(HZ);
 	timer.it_interval.tv_sec = 0;
-	timer.it_interval.tv_usec = 10000;
+	timer.it_interval.tv_usec = 100*(HZ);
 	//start a virtual timer
 	setitimer (ITIMER_VIRTUAL, &timer, NULL);
 }
 
 void preempt_stop(void)
 {
-	preempt_disable();
-	signal(SIGILL, SIG_DFL);	//reset to default behavior for signals
-	signal(SIGABRT, SIG_DFL);
+	setitimer(ITIMER_VIRTUAL, NULL, NULL);	//stop timer
+	sa.sa_handler = SIG_DFL;
+	sigaction(SIGVTALRM, &sa, NULL);	//reset handler for virtual alarm to default handler
 }
 
 void preempt_enable(void)
 {
-	sigprocmask(SIG_UNBLOCK, &sa.sa_mask, NULL);
+	sigprocmask(SIG_UNBLOCK, &sa.sa_mask, NULL);	//unblock sigvtalarm
 }
 
 void preempt_disable(void)
 {
-	sigprocmask(SIG_BLOCK, &sa.sa_mask, NULL);
+	sigprocmask(SIG_BLOCK, &sa.sa_mask, NULL);	//block sigvtalarm
 }

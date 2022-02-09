@@ -76,15 +76,14 @@ int uthread_start(int preempt)
 	q_exited = queue_create();
 	tcb_t* tcb_main = (tcb_t*)malloc(sizeof(struct tcb));
 
-	if(q_scheduler == NULL || q_blocked == NULL || q_exited == NULL || tcb_main == NULL || queue_enqueue(q_scheduler, tcb_main) != 0) return -1;
+	if(q_scheduler == NULL || q_blocked == NULL || q_exited == NULL || tcb_main == NULL) return -1;
 
 	curr_thread = tcb_main; 
-	global_tid_size=0;
+	global_tid_size = 0;
 	tcb_main->mytid = global_tid_size++;
-	top_of_stack[tcb_main->mytid] = uthread_ctx_alloc_stack();
-	uthread_ctx_init(&ctx[tcb_main->mytid], top_of_stack[tcb_main->mytid], NULL);
 	tcb_main->myjoiner = -1;
 	tcb_main->mystate = RUNNING;
+	queue_enqueue(q_scheduler, tcb_main);
 
 	if(preempt)
 	{
@@ -131,7 +130,6 @@ int uthread_create(uthread_func_t func)
 
 void uthread_yield(void)
 {
-	preempt_enable();
 	struct tcb* prev_thread = curr_thread;
 
 	if(prev_thread->mystate == EXITED)	//move curr thread to exited queue
