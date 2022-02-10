@@ -1,4 +1,3 @@
 uthreadlib
 .vscode
 *.o
-contexts_fixed_schedule.c

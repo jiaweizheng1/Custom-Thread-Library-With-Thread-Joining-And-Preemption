@@ -1,12 +1,13 @@
 # Target programs
 programs := \
-	queue_tester_example.x \
+	queue_tester.x \
 	uthread_hello.x \
 	uthread_join.x \
 	uthread_join_self.x \
 	uthread_join_complex.x \
 	uthread_join_eachother.x \
 	uthread_yield.x\
+	uthread_preempt_stop.x\
 	test_preempt.x
 
 # User-level thread library

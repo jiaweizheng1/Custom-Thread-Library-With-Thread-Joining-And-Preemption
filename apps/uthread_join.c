@@ -5,7 +5,6 @@
 
 int thread3(void)
 {
-	uthread_yield();
 	printf("thread%d finished\n", uthread_self());
 	return 7777;
 }

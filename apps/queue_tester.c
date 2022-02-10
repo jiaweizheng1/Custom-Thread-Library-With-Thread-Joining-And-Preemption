@@ -325,7 +325,7 @@ void test_iterator(void)
 void test_iterator2(void)
 {
     queue_t q;
-    int data[] = {1, 2, 3, 4, 5, 9, 6, 7, 8, 42};
+    int data[] = {42, 2, 3, 4, 5, 9, 6, 7, 8, 42};	//delete both ends of array
     size_t i;
     int *ptr;
 
@@ -335,15 +335,15 @@ void test_iterator2(void)
     for (i = 0; i < sizeof(data) / sizeof(data[0]); i++)
         queue_enqueue(q, &data[i]);
 
-    queue_iterate(q, inc_item, (void*)1, NULL);
-    TEST_ASSERT(data[0] == 2);
-    TEST_ASSERT(queue_length(q) == 9);
+    queue_iterate(q, inc_item, (void*)1, NULL);	//incre data by 1, delete 2 '42'
+    TEST_ASSERT(data[4] == 6);
+    TEST_ASSERT(queue_length(q) == 8);
 
     ptr = NULL;    
-    queue_iterate(q, find_item, (void*)5, (void**)&ptr);
+    queue_iterate(q, find_item, (void*)9, (void**)&ptr);	//find 9
     TEST_ASSERT(ptr != NULL);
-    TEST_ASSERT(*ptr == 5);
-    TEST_ASSERT(ptr == &data[3]);
+    TEST_ASSERT(*ptr == 9);
+    TEST_ASSERT(ptr == &data[8]);
 	for (i = 0; i < 9; i++)
         queue_dequeue(q, (void**)&ptr);
 	queue_destroy(q);	//for valgrind checking memory leaks
@@ -362,12 +362,12 @@ void test_iterator3(void)
     for (i = 0; i < sizeof(data) / sizeof(data[0]); i++)
         queue_enqueue(q, &data[i]);
 
-    queue_iterate(q, inc_item, (void*)1, NULL);
+    queue_iterate(q, inc_item, (void*)1, NULL);	//incre data by 1
     TEST_ASSERT(data[0] == 2);
     TEST_ASSERT(queue_length(q) == 9);
 
     ptr = NULL;     
-    queue_iterate(q, find_item, (void*)9, (void**)&ptr);
+    queue_iterate(q, find_item, (void*)9, (void**)&ptr);	//find 9
     TEST_ASSERT(ptr != NULL);
     TEST_ASSERT(*ptr == 9);
     TEST_ASSERT(ptr == &data[9]);
@@ -389,17 +389,17 @@ void test_iterator4(void)
     for (i = 0; i < sizeof(data) / sizeof(data[0]); i++)
         queue_enqueue(q, &data[i]);
 
-    queue_iterate(q, inc_item, (void*)2, NULL);
+    queue_iterate(q, inc_item, (void*)2, NULL);	//incre data by 2, delete 3 '42'
     TEST_ASSERT(data[1] == 4);
     TEST_ASSERT(queue_length(q) == 7);
 
     ptr = NULL;
 	ptr2 = NULL;  
-    queue_iterate(q, find_item, (void*)4, (void**)&ptr);
+    queue_iterate(q, find_item, (void*)4, (void**)&ptr);	//find 4
     TEST_ASSERT(ptr != NULL);
     TEST_ASSERT(*ptr == 4);
     TEST_ASSERT(ptr == &data[1]);
-	TEST_ASSERT(0 == queue_iterate(q, find_item, (void*)1, (void**)&ptr2));
+	TEST_ASSERT(0 == queue_iterate(q, find_item, (void*)1, (void**)&ptr2));	//find nonexistant 1
 	TEST_ASSERT(ptr2 == NULL);
 	for (i = 0; i < 7; i++)
         queue_dequeue(q, (void**)&ptr);
@@ -409,7 +409,7 @@ void test_iterator4(void)
 void test_iterator5(void)
 {
     queue_t q;
-    int data[] = {2, 42, 3, 42, 4, 42, 5, 42, 6, 42};
+    int data[] = {2, 42, 3, 42, 4, 42, 5, 42, 6, 42};	//chain of 42 for deletion
     size_t i;
     int *ptr, *ptr2;
 
@@ -419,14 +419,14 @@ void test_iterator5(void)
     for (i = 0; i < sizeof(data) / sizeof(data[0]); i++)
         queue_enqueue(q, &data[i]);
 
-    queue_iterate(q, inc_item, (void*)10, NULL);
+    queue_iterate(q, inc_item, (void*)10, NULL);	//incre data by 10, delete 5 '42'
     TEST_ASSERT(data[1] == 42);
 	TEST_ASSERT(data[0] == 12);
     TEST_ASSERT(queue_length(q) == 5);
 
     ptr = NULL;
 	ptr2 = NULL;
-    queue_iterate(q, find_item, (void*)16, (void**)&ptr);
+    queue_iterate(q, find_item, (void*)16, (void**)&ptr);	//find two indices
 	queue_iterate(q, find_item, (void*)12, (void**)&ptr2);
     TEST_ASSERT(ptr != NULL);
 	TEST_ASSERT(ptr2 != NULL);

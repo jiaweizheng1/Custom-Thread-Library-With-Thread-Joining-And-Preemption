@@ -46,7 +46,7 @@ void preempt_start()
 
 void preempt_stop(void)
 {
-	setitimer(ITIMER_VIRTUAL, NULL, NULL);	//stop timer
+	setitimer(ITIMER_VIRTUAL, 0, NULL);	//stop timer
 	sa.sa_handler = SIG_DFL;
 	sigaction(SIGVTALRM, &sa, NULL);	//reset handler for virtual alarm to default handler
 }
