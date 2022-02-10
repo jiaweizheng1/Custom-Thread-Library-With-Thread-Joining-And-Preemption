@@ -29,7 +29,7 @@ struct tcb
 
 static tcb_t* curr_thread;	//global varaible to current thread makes it easier to swap context with the next ready thread
 
-static queue_t q_scheduler;	//a ready/running queue
+static queue_t q_scheduler;	//a ready/running threads queue
 
 static queue_t q_blocked;	//queue for threads who called join on other threads. helps make scheduling O(1) because don't have to iterate through blocked threads
 
@@ -37,21 +37,13 @@ static queue_t q_exited;	//queue for threads that has finished execution. helps 
 
 static uthread_t global_tid_size; //makes it easier to assign tids to new threads
 
-static int find_next_ready_thread(queue_t q, void *data, void *arg)	//helper function to find ready threads in q_scheduler
+static int find_head_ready_thread(queue_t q, void *data, void *arg)	//helper function to find ready threads in q_scheduler
 {
 	(void)q;
 	(void)arg;
-	struct tcb* thread = data;
+	(void)data;
 
-	if(thread->mystate == READY)
-	{
-		return 1;
-		
-	}
-	struct tcb* requeue_thread;
-	queue_dequeue(q, (void**)&requeue_thread);
-	queue_enqueue(q, requeue_thread);
-	return 0;
+	return 1;
 }
 
 static int find_thread(queue_t q, void *data, void *arg)	//helper function to find a particular thread in a queue by proving tid of the thread
@@ -155,7 +147,7 @@ void uthread_yield(void)
 	preempt_enable();
 
 	preempt_disable();
-	queue_iterate(q_scheduler, find_next_ready_thread, NULL, (void**)&curr_thread); //update curr_thread to next thread to run
+	queue_iterate(q_scheduler, find_head_ready_thread, NULL, (void**)&curr_thread); //update curr_thread to next thread to run
 	curr_thread->mystate=RUNNING;
 	preempt_enable();
 
@@ -203,8 +195,8 @@ int uthread_join(uthread_t tid, int *retval)
 	{
 		if(ptr_wait_thread->myjoiner != -1) return -1;	//child is already being joined
 		ptr_wait_thread->myjoiner = curr_thread->mytid;	//set that child thread's joined parent to current thread
-		curr_thread->mystate = BLOCKED;
-		uthread_yield(); 
+		curr_thread->mystate = BLOCKED;	
+		uthread_yield(); //move curre thread to blocked queue
 	}
 	else	//child has already exited into q_exited
 	{
