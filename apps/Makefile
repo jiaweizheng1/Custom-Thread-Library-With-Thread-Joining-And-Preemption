@@ -6,6 +6,7 @@ programs := \
 	uthread_join_self.x \
 	uthread_join_complex.x \
 	uthread_join_eachother.x \
+	uthread_join_blocked.x \
 	uthread_yield.x\
 	uthread_preempt_stop.x\
 	test_preempt.x

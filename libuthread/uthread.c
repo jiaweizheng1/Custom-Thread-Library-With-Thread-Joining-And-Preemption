@@ -11,11 +11,7 @@
 #include "uthread.h"
 #include "queue.h"
 
-typedef enum {RUNNING, READY, BLOCKED, EXITED} state_t;	//states for threads
-
-static ucontext_t ctx[USHRT_MAX];	//ctx for ushrt_max threads
-
-static void* top_of_stack[USHRT_MAX];	//top of stack void ptr array for freeing contexes/stacks
+typedef enum {RUNNING, READY, BLOCKED, EXITED} state_t;	//states for threads; set these states to predefined constants
 
 typedef struct tcb tcb_t;
 
@@ -25,6 +21,8 @@ struct tcb	//struct to store information about a thread
 	state_t mystate;
 	int myexit;	//return value
 	int myjoiner;	//initially set to -1 for invalid tid as joiner
+	void* mystackptr;
+	uthread_ctx_t myctx;
 };
 
 static tcb_t* curr_thread;	//global ptr to current thread makes it easier to swap context with the next ready thread
@@ -109,8 +107,8 @@ int uthread_create(uthread_func_t func)	//alloc memory for tcb of another thread
 		tcb_thread->mytid = global_tid_size++;
 
 		preempt_disable();	//protect ctx creation for thread from being preempted
-		top_of_stack[tcb_thread->mytid] = uthread_ctx_alloc_stack();	//initialize ctx for the thread
-		uthread_ctx_init(&ctx[tcb_thread->mytid], top_of_stack[tcb_thread->mytid], func);
+		tcb_thread->mystackptr = uthread_ctx_alloc_stack();	//initialize ctx for the thread
+		uthread_ctx_init(&tcb_thread->myctx, tcb_thread->mystackptr, func);
 		preempt_enable();
 
 		queue_enqueue(q_scheduler, tcb_thread);	//enqueue thread to scheduler to be scheduled
@@ -144,13 +142,11 @@ void uthread_yield(void)
 		prev_thread->mystate = READY;
 	}
 	queue_iterate(q_scheduler, find_head_ready_thread, NULL, (void**)&curr_thread); //update curr_thread to next thread to run
-	preempt_enable();
 	
 	curr_thread->mystate=RUNNING;
-	preempt_disable();	//protect context swapping from being preempted
 	if(prev_thread != curr_thread)	//dont need to swap context if choose the same thread
 	{
-		uthread_ctx_switch(&ctx[prev_thread->mytid], &ctx[curr_thread->mytid]);	
+		uthread_ctx_switch(&prev_thread->myctx, &curr_thread->myctx);	//protect context swapping from being preempted
 	}
 	preempt_enable();
 }
@@ -168,7 +164,7 @@ void uthread_exit(int retval)	//set thread's state to exit then call yield to do
 		struct tcb* ptr_parent;	
 		queue_iterate(q_blocked, find_thread, (void*)(long)(int)curr_thread->myjoiner, (void**)&ptr_parent);	//find parent in blocked queue
 		queue_delete(q_blocked, ptr_parent);
-		queue_enqueue(q_scheduler, ptr_parent);	//enqueue blocked parent back to end of queue scheduler
+		queue_enqueue(q_scheduler, ptr_parent);	//move blocked parent from blocked queue back to q_scheduler to be scheduled
 		ptr_parent->mystate = READY;
 	}
 	curr_thread->mystate = EXITED;
@@ -181,30 +177,39 @@ int uthread_join(uthread_t tid, int *retval)
 	if(tid == 0 || curr_thread->mytid == tid) return -1;
 	struct tcb* ptr_wait_thread = NULL;
 
-	queue_iterate(q_scheduler, find_thread, (void*)(long)(int)tid, (void**)&ptr_wait_thread); //find child thread in scheduler queue
-
-	preempt_disable();	//to avoid two threads accessing child->myjoiner at the same time to set themselves as the parent of that child thread 
+	queue_iterate(q_scheduler, find_thread, (void*)(long)(int)tid, (void**)&ptr_wait_thread); //try to find child thread in scheduler queue
 	if(ptr_wait_thread != NULL)	//child is in q_scheduler, then curr_thread must be placed into blocked queue
 	{
 		if(ptr_wait_thread->myjoiner != -1) return -1;	//child is already being joined
 		ptr_wait_thread->myjoiner = curr_thread->mytid;	//set that child thread's joined parent to current thread
 		curr_thread->mystate = BLOCKED;	
-		uthread_yield(); //move curre thread to blocked queue
+		uthread_yield(); //move current thread to blocked queue
 	}
-	else	//child has already exited into q_exited
+	else
 	{
-		queue_iterate(q_exited, find_thread, (void*)(long)(int)tid, (void**)&ptr_wait_thread); //find child thread in exited queue instead 
-		if(ptr_wait_thread == NULL) return -1; //cant find tid
-		if(ptr_wait_thread->myjoiner != -1) return -1;	//child is already being joined
-		ptr_wait_thread->myjoiner = curr_thread->mytid; //set that child thread's joined parent to current thread
+		queue_iterate(q_blocked, find_thread, (void*)(long)(int)tid, (void**)&ptr_wait_thread); //try to find child thread in blocked queue
+		if(ptr_wait_thread != NULL)	//child is in blocked queue, then curr_thread must also be placed into blocked queue
+		{
+			if(ptr_wait_thread->myjoiner != -1) return -1;	//child is already being joined
+			ptr_wait_thread->myjoiner = curr_thread->mytid;	//set that child thread's joined parent to current thread
+			curr_thread->mystate = BLOCKED;	
+			uthread_yield(); //move current thread to blocked queue
+		}
+		else	//child has already exited into q_exited so we dont need to yield and block current thread
+		{
+			queue_iterate(q_exited, find_thread, (void*)(long)(int)tid, (void**)&ptr_wait_thread); //try to find child thread in exited queue instead 
+			if(ptr_wait_thread == NULL) return -1; //cant find tid in any queues
+			if(ptr_wait_thread->myjoiner != -1) return -1;	//child is already being joined
+			ptr_wait_thread->myjoiner = curr_thread->mytid; //set that child thread's joined parent to current thread
+		}
 	}
-	preempt_enable();
-	
-	if(retval != NULL)	//set retval to the return value of the joined child
+
+	//if blocked, parent will resume here after their child has placed them back into the q_scheduler
+	if(retval != NULL)	//otherwise, child has already exited, parent dont have to be blocked, and parent can free the child immediately
 	{
-		*retval = ptr_wait_thread->myexit;
+		*retval = ptr_wait_thread->myexit;	//set retval to the return value of the joined child
 	}
-	uthread_ctx_destroy_stack(top_of_stack[ptr_wait_thread->mytid]);	//free child's resources
+	uthread_ctx_destroy_stack(ptr_wait_thread->mystackptr);	//free child's resources
 	queue_delete(q_exited, ptr_wait_thread);
 	free(ptr_wait_thread);
 	return 0;
