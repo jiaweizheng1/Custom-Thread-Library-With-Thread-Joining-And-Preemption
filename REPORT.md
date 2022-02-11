@@ -10,7 +10,7 @@ Contributors: Haixu Qin, Jiawei Zheng
 
 [Phase IV](#Phase-IV:-preemption) 
 
-[References](#References)
+[References](##References)
 
 ## Phase I:queue API 
 A FIFO(first in, first out) queue is a type of structure for storing 
