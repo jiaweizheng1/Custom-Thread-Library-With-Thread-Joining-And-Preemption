@@ -129,8 +129,7 @@ preemption works.
 Lecture/discussion slides \
 Piazza \
 https://linux.die.net/man/3/swapcontext \
-https://opensource.apple.com/source/libplatform/libplatform-126.1.2/src/
-ucontext/generic/swapcontext.c \
+https://opensource.apple.com/source/libplatform/libplatform-126.1.2/src/ucontext/generic/swapcontext.c \
 https://linux.die.net/man/2/setitimer \
 https://man7.org/linux/man-pages/man2/sigprocmask.2.html \
 https://man7.org/linux/man-pages/man2/sigaction.2.html \
