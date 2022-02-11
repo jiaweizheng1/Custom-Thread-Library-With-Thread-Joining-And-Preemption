@@ -2,15 +2,16 @@
 
 Contributors: Haixu Qin, Jiawei Zheng
 
-[Phase I](##Phase-I:queue-API) 
+[Phase I](#Phase-I:queue-API) 
 
-[Phase II](##Phase-II:-uthread-API) 
+[Phase II](#Phase-II:-uthread-API) 
 
-[Phase III](##Phase-III:-uthread_join()) 
+[Phase III](#Phase-III:-uthread_join()) 
 
-[Phase IV](##Phase-IV:-preemption) 
+[Phase IV](#Phase-IV:-preemption) 
 
-[References](##References)
+[References](#References)
+
 ## Phase I:queue API 
 A FIFO(first in, first out) queue is a type of structure for storing 
 information; the first item added to the queue will be the first one to be 
