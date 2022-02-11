@@ -2,13 +2,13 @@
 
 Contributors: Haixu Qin, Jiawei Zheng
 
-[Phase I](#Phase-I-:queue-API) 
+[Phase I](#Phase-I/:queue-API) 
 
-[Phase II](#Phase-II-:-uthread-API) 
+[Phase II](#Phase-II-uthread-API) 
 
-[Phase III](#Phase-III-:-uthread_join()) 
+[Phase III](#Phase-III-uthread_join()) 
 
-[Phase IV](#Phase-IV-:-preemption) 
+[Phase IV](#Phase-IV-preemption) 
 
 [References](#References)
 
