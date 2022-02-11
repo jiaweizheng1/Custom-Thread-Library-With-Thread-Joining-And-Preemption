@@ -6,9 +6,9 @@ Contributors: Haixu Qin, Jiawei Zheng
 
 [Phase II](#Phase-II-uthread-API) 
 
-[Phase III](#Phase-III-uthreadjoin) 
+[Phase III](#Phase-III-uthread_join) 
 
-[Phase IV](#Phase-IV-preemption-and-testpreemptx) 
+[Phase IV](#Phase-IV-preemption-and-test_preempt_x) 
 
 [References](#References)
 
