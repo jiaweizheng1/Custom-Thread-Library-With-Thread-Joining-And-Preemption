@@ -8,7 +8,7 @@ Contributors: Haixu Qin, Jiawei Zheng
 
 [Phase III](#Phase-III-uthreadjoin) 
 
-[Phase IV](#Phase-IV-preemption-and-test_preemptx) 
+[Phase IV](#Phase-IV-preemption-and-testpreemptx) 
 
 [References](#References)
 
