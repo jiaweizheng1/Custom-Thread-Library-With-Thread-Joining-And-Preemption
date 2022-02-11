@@ -2,14 +2,16 @@
 
 Contributors: Haixu Qin, Jiawei Zheng
 
-[Phase I](#Phase-I)
+[Phase I](##Phase-I:queue-API) 
 
-[Phase II](#Phase-II)
+[Phase II](##Phase-II:-uthread-API) 
 
-[Phase III](#Phase-III)
+[Phase III](##Phase-III:-uthread_join()) 
 
-[Phase IV](#Phase-IV)
-## Phase I: queue API
+[Phase IV](##Phase-IV:-preemption) 
+
+[References](##References)
+## Phase I:queue API 
 A FIFO(first in, first out) queue is a type of structure for storing 
 information; the first item added to the queue will be the first one to be 
 removed. For the queue, we chose to use a linked list of nodes. Each node 
@@ -46,7 +48,7 @@ because the functions always traverse from the oldest node of the queue to the
 newest node of the queue. Thus, there are scenarios in which the data we want 
 to delete or operate on might be the last node in the queue and so we have to 
 iterate through the entire queue. 
-## Phase II: uthread API
+## Phase II: uthread API 
 Threads are sequences of instructions that run concurrently within a single 
 process and they share the same global variables, heap memory, and open file 
 descriptors. To deal with the creation and scheduling of threads, we created a 
@@ -85,7 +87,7 @@ q_scheduler so they can collect and free their child’s resource; this ensures
 the best runtime for finding the blocked thread’s child within the exited queue 
 because there are no blocked threads in this queue but only other exited 
 threads.
-## Phase III: uthread_join()
+## Phase III: uthread_join() 
 A thread A joining thread B means that thread A should be blocked from 
 execution until thread B has exited. We decided to make a blocked queue to 
 store these blocked threads and only retrieve these blocked threads from the 
@@ -103,7 +105,7 @@ limitation. However, we still try to make looking for the child as efficient as
 possible by not iterating the other queues if we have already found the child 
 in one of the queues; which is still O(n) because the child might be in the 
 last queue we search through or the child do not even exist.
-## Phase IV: preemption
+## Phase IV: preemption and test_preempt.x
 We decided to disable preemption for when there is a thread context switch or 
 initialization of thread context, when the queues are being dequeued or 
 enqueued, and when a thread exits by calling uthread_exit(). For example, we 
